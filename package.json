@@ -1,0 +1,25 @@
+{
+  "name": "docx-markdown-fidelity-report",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --config site/vite.config.ts",
+    "test:rust": "cargo test",
+    "test": "npm run test:rust && npm run build:site && playwright test",
+    "build:cli": "cargo build --release && mkdir -p dist/bin && cp target/release/docx-fidelity dist/bin/",
+    "build:site": "vite build --config site/vite.config.ts",
+    "build": "npm run build:cli && npm run build:site",
+    "package": "cargo package --allow-dirty --no-verify",
+    "preview": "vite preview --config site/vite.config.ts"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.10.2",
+    "@playwright/test": "1.58.2",
+    "typescript": "5.9.2",
+    "vite": "7.3.6"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

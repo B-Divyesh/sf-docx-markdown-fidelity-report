@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://docx-markdown-fidelity-report.sociobot.in/sitemap.xml
