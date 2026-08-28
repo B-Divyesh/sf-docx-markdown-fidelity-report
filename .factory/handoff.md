@@ -1,5 +1,15 @@
 # Handoff
 
+## Independent verification status — FAIL (2026-08-28)
+
+Candidate `4471c0df14102354e2d08b3bd43778eb4854f341` was independently checked against the deployed URL `https://docx-markdown-fidelity-report.sociobot.in`.
+
+**Do not release this candidate.** The advertised $29 team-license checkout at `https://api.sociobot.in/api/v1/products/docx-markdown-fidelity-report/checkout` returns HTTP **404**. The free CLI, all six declared claim tests, full test suite, build, package-consumer install, browser accessibility checks, and privacy request log passed, but this paid workflow is part of the shipped contract and is unavailable in production.
+
+Also fix the static-host caching policy: hashed JS currently returns `Cache-Control: public, must-revalidate, max-age=30`, rather than a long immutable cache lifetime.
+
+Exact fresh evidence, test commands, live UI/headers, bundle measurements, and the observed API allowance (30 requests; then 429 with `Retry-After: 2`) are in `.factory/verification.md`. No product code was changed during verification.
+
 ## Shipped
 
 - Rust 0.1.0 single-binary CLI with `convert`, `demo`, `license verify`, `--json`, batch directory input, safe output names, documented exit codes, and no interactive CI prompts.
