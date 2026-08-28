@@ -1,0 +1,44 @@
+[
+  {
+    "id": "demo-conversion",
+    "claim": "The demo converts a bundled DOCX and writes Markdown plus a fidelity report.",
+    "where": "landing first screen, demo, README",
+    "test": "npm test -- --grep @claim:demo-conversion",
+    "sandbox": "fresh temporary directory; bundled sample; assert Markdown and report files plus review findings"
+  },
+  {
+    "id": "local-processing",
+    "claim": "Document conversion runs locally and sends no document data over the network.",
+    "where": "landing facts, privacy, README",
+    "test": "npm test -- --grep @claim:local-processing",
+    "sandbox": "fresh browser context on /demo; intercept requests and assert only same-origin site assets load"
+  },
+  {
+    "id": "risk-ledger",
+    "claim": "Reports list tables, comments, revisions, embedded objects, footnotes, styles, and image outcomes with source locations.",
+    "where": "landing preview, README",
+    "test": "npm test -- --grep @claim:risk-ledger",
+    "sandbox": "bundled complex DOCX fixture; assert every construct category and source location in JSON report"
+  },
+  {
+    "id": "batch-conversion",
+    "claim": "One command converts every DOCX in a directory.",
+    "where": "landing how it works, README",
+    "test": "npm test -- --grep @claim:batch-conversion",
+    "sandbox": "fresh directory with two DOCX fixtures; assert two Markdown files and two reports"
+  },
+  {
+    "id": "paid-policy",
+    "claim": "A team license adds CI policy gates for selected risk levels.",
+    "where": "landing paid tier, README",
+    "test": "npm test -- --grep @claim:paid-policy",
+    "sandbox": "fixture license verifier; assert valid token enables --fail-on and invalid token does not"
+  },
+  {
+    "id": "safe-input",
+    "claim": "The CLI rejects unsafe archive paths and never extracts embedded objects.",
+    "where": "landing boundaries, README",
+    "test": "npm test -- --grep @claim:safe-input",
+    "sandbox": "malicious DOCX fixture with a parent-directory entry; assert exit 2 and no escaped file"
+  }
+]

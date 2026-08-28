@@ -1,6 +1,9 @@
-node_modules/
-dist/
-.env
+/target/
+/node_modules/
+/dist/
+/test-results/
+/playwright-report/
+/.env
+/graphify-out/
 *.log
-graphify-out/
 .DS_Store
