@@ -1,0 +1,40 @@
+[package]
+name = "docx-markdown-fidelity-report"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.80"
+description = "Convert DOCX to Markdown and emit a source-located fidelity report"
+license = "MIT"
+repository = "https://github.com/B-Divyesh/sf-docx-markdown-fidelity-report"
+readme = "README.md"
+keywords = ["docx", "markdown", "conversion", "fidelity", "cli"]
+categories = ["command-line-utilities", "text-processing"]
+include = ["/src/**", "/examples/field-guide.docx", "/README.md", "/LICENSE", "/CHANGELOG.md"]
+
+[lib]
+name = "docx_fidelity"
+path = "src/lib.rs"
+
+[[bin]]
+name = "docx-fidelity"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1.0"
+clap = { version = "4.5", features = ["derive"] }
+quick-xml = "0.37"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+ureq = { version = "2.12", default-features = false, features = ["tls", "json"] }
+zip = { version = "2.2", default-features = false, features = ["deflate"] }
+
+[dev-dependencies]
+tempfile = "3.14"
+
+[profile.release]
+strip = true
+lto = "thin"
+codegen-units = 1
+
+[package.metadata.docs.rs]
+all-features = true

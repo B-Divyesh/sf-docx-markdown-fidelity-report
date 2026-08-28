@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+  <w:body>
+    <w:p><w:pPr><w:pStyle w:val="Heading1"/></w:pPr><w:r><w:t>North Ridge Field Guide</w:t></w:r></w:p>
+    <w:p><w:r><w:t>Use this guide </w:t></w:r><w:r><w:rPr><w:b/></w:rPr><w:t>before the trail opens</w:t></w:r><w:r><w:t>. Read the </w:t></w:r><w:hyperlink r:id="rId7"><w:r><w:rPr><w:i/></w:rPr><w:t>trail notices</w:t></w:r></w:hyperlink><w:commentRangeStart w:id="0"/><w:r><w:t>. Check the ridge after heavy rain.</w:t></w:r><w:commentRangeEnd w:id="0"/></w:p>
+    <w:p><w:pPr><w:pStyle w:val="SurveyNote"/></w:pPr><w:r><w:t>Conditions change near marker seven.</w:t></w:r></w:p>
+    <w:p><w:r><w:t>The lower bridge is </w:t></w:r><w:del w:id="4"><w:r><w:delText>closed</w:delText></w:r></w:del><w:ins w:id="5"><w:r><w:t>open for foot traffic</w:t></w:r></w:ins><w:r><w:t>.</w:t></w:r></w:p>
+    <w:tbl>
+      <w:tr><w:tc><w:p><w:r><w:t>Marker</w:t></w:r></w:p></w:tc><w:tc><w:p><w:r><w:t>Action</w:t></w:r></w:p></w:tc></w:tr>
+      <w:tr><w:tc><w:p><w:r><w:t>R7</w:t></w:r></w:p></w:tc><w:tc><w:p><w:r><w:t>Inspect drainage</w:t></w:r></w:p></w:tc></w:tr>
+      <w:tr><w:tc><w:p><w:r><w:t>B2</w:t></w:r></w:p></w:tc><w:tc><w:p><w:r><w:t>Photograph bridge</w:t></w:r></w:p></w:tc></w:tr>
+    </w:tbl>
+    <w:p><w:r><w:t>Map overview </w:t></w:r><w:r><w:drawing><a:blip r:embed="rId5"/></w:drawing></w:r></w:p>
+    <w:p><w:r><w:t>Survey source</w:t><w:footnoteReference w:id="2"/></w:r></w:p>
+    <w:p><w:r><w:t>Legacy checklist: </w:t><w:object><w:oleObject r:id="rId6"/></w:object></w:r></w:p>
+    <w:sectPr/>
+  </w:body>
+</w:document>
