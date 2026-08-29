@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.2 — 2026-08-29
+
+- Escape literal Word text so it cannot become active Markdown syntax.
+- Read DOCX numbering definitions and preserve decimal, bullet, and nested lists.
+- Report source-located list findings when a numbering definition is unavailable or lossy.
+- Raise the tested minimum Rust toolchain to 1.88.
+- Cover demo isolation, binary packaging, checklist output, archive bounds, and source-fidelity claims.
+
 ## 0.1.1 — 2026-08-29
 
 - Make CI policy gates local and included, removing the unavailable checkout flow.

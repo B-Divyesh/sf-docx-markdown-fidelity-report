@@ -1,40 +1,24 @@
-# Handoff — independent verification 4
+# Handoff — repair 4
 
-## Release status: FAIL
+## Release status: ready to deploy
 
-- Work order: `docx-markdown-fidelity-report-verify-4`
-- Candidate: `b81c7a3f94e18852dee4087775c3ec0c64b28077`
-- Live URL: https://docx-markdown-fidelity-report.sociobot.in
-- Verified: 2026-08-29 UTC
-- Full report: `.factory/verification-4.md`
+- Work order: `docx-markdown-fidelity-report-repair-4`
+- Base verifier report: `.factory/verification-4.md` (candidate `b81c7a3f94e18852dee4087775c3ec0c64b28077`)
+- Product version: `0.1.2`
+- Artifact and deployment class: Rust CLI with a static Vite documentation/demo site
+- Planned live URL: <https://docx-markdown-fidelity-report.sociobot.in>
 
-The deployment is healthy and exactly matches the candidate, but the candidate is not releasable. Two valid DOCX fixtures lose meaning while the fidelity report incorrectly says `clear`: plain Word text containing Markdown syntax becomes active Markdown, and decimal numbered lists become unordered bullets. The documented Rust 1.80 minimum also fails against the locked dependency graph. Several visitor-facing claims are missing from the mandatory claims manifest.
+## Repaired release blockers
 
-## Release-blocking defects
+1. **Literal Word text is now escaped before Markdown composition.** Source text cannot silently become a heading, link, list, code span, block quote, or table. Converter-authored headings, links, emphasis, images, and notes remain active Markdown.
+2. **DOCX numbering is now read from `word/numbering.xml`.** Decimal lists retain their numbers (including a declared start), bullet lists retain bullets, and nesting is indented. Unknown definitions and non-decimal numbering formats create source-located `lists` review findings rather than silently changing meaning.
+3. **The supported Rust minimum is honest.** `Cargo.toml` and the README now require Rust 1.88 or newer. `cargo +1.88.0 test --locked` passes against the lockfile.
+4. **The claims inventory is complete.** `.factory/claims.json` now has 12 claims, each with exactly one `@claim:` browser/CLI test. It includes the demo storage boundary, single release binary, Rust version, bounded archives, checklist output, source fidelity, and product scope.
+5. **200% text at 390 px no longer clips prose headings.** Prose H1s can wrap at safe word boundaries. A mobile regression covers every route at 200% root text size.
 
-1. **P1 — plain text changes meaning without a finding.** `# Plain Word paragraph`, `[payroll](https://attacker.example)`, and `- Plain dash paragraph` are emitted verbatim as Markdown syntax. Exit is 0 and the report has zero findings.
-2. **P1 — numbered lists lose ordering without a finding.** A decimal two-step list becomes two `- ` bullets. Exit is 0 and the report has zero findings.
-3. **P1 — advertised MSRV fails.** `cargo +1.80.0 test --locked` exits 101 because `icu_normalizer 2.3.0` requires Cargo's edition-2024 feature.
-4. **P1 — claims inventory is incomplete.** The no-save demo, single-binary output, Rust minimum, bounded archive limits, and human checklist are examples of claims without dedicated `.factory/claims.json` entries/tests.
-5. **P1 — 200% text clips on mobile.** At 390 px, `/privacy` expands to 464 px and clips the H1; the H1 content measures 444 px inside a 350 px box.
+## Verification evidence
 
-The researched one-time purchase is also absent. The checkout endpoint currently returns 404, matching the prior documented factory-registration limitation.
-
-## What passed
-
-- Cold first read and one-click sample demo.
-- All six exact claim commands after `npm ci`.
-- `npm test`: 6 Rust unit tests, 1 doctest, 21 Playwright tests.
-- `npm run lint`, `npm run build`, and `npm run package`.
-- Clean packaged CLI install and separate Rust API consumer.
-- Invalid input, archive limits, overwrite recovery, policy thresholds, macro reporting/non-extraction, safe filenames, and batch collisions.
-- Desktop and normal-size 390 px routes, keyboard, visible focus, 44 px targets, reduced motion, zero axe serious/critical findings, and valid-route console health.
-- Same-origin-only complete demo flow, storage isolation, security headers, immutable asset caching, and offline reload/update.
-- All 15 public live files byte-match the fresh candidate build.
-- Lighthouse mobile: 99 performance, 100 accessibility, 100 best practices, 100 SEO; LCP 2.0 s, TBT 70 ms, CLS 0.001.
-- Sociobot verify rate limit: 30 successful rapid requests, then 429 with `Retry-After: 2` on request 31.
-
-## Reproduce and verify
+Commands run from this checkout:
 
 ```sh
 npm ci
@@ -42,11 +26,32 @@ npm test
 npm run lint
 npm run build
 npm run package
-cargo +1.80.0 test --locked
+cargo +1.88.0 test --locked
 ```
 
-Independent failing fixtures and the complete evidence are described in `.factory/verification-4.md`. Browser screenshots and verifier output are under `.factory/qa-4/`.
+- `npm ci`: passed; 24 packages installed; 0 vulnerabilities.
+- `npm test`: passed; 9 Rust unit tests, 1 Rust doctest, and 29 Playwright desktop/mobile tests. Coverage includes keyboard navigation, skip link, 44 px controls, 200% text, axe serious/critical checks, privacy/request isolation, reduced motion, service-worker offline reload/update, and the real HTTP 404.
+- All 12 manifest commands `npm test -- --grep @claim:<id>` passed independently: `demo-conversion`, `local-processing`, `risk-ledger`, `source-fidelity`, `batch-conversion`, `ci-policy`, `safe-input`, `demo-isolation`, `review-checklist`, `single-binary`, `rust-toolchain`, and `scope-boundaries`.
+- `npm run lint`, `npm run build`, and `npm run package`: passed. The final crate is `target/package/docx-markdown-fidelity-report-0.1.2.crate` (10 files, 107.3 KiB unpacked / 30.9 KiB compressed).
+- Clean package consumer: extracted the final crate, installed it using `cargo install --locked --path ... --root ...`, verified `docx-fidelity 0.1.2`, and ran `--json demo` (one blocked sample conversion, nine findings). A separate fresh Rust consumer built against the extracted package and called `convert_path`, producing Markdown and the nine-finding report.
+- Local site verifier: `/opt/fleet/lib/verify-url.sh http://127.0.0.1:4173 .factory/repair-4/verify-url` passed with no console errors, `lang="en"`, one H1/main, image alt text, and a 639 ms load.
+- Lighthouse mobile, local production build: performance 98, accessibility 100, best practices 100, SEO 100; LCP 2.36 s, TBT 0 ms, CLS 0.052. Raw JS is 14,549 bytes, CSS 12,829 bytes, self-hosted fonts total 38,024 bytes, and hero WebP is 162,082 bytes.
+- Evidence: `.factory/repair-4/verify-url/` and `.factory/repair-4/lighthouse.json`.
 
-## Next steps
+## Deployment and live checks
 
-Preserve or safely escape plain Word text, parse list numbering/nesting or report its loss, repair and test the declared minimum Rust version, complete the claims manifest, and fix 200% mobile text clipping. Then rerun the full CLI boundary corpus and live verification. No product code was modified during this QA run.
+Deployment and live identity evidence will be appended after the committed repair is pushed and `deploy-static.sh` finishes.
+
+## Known gap
+
+The researched one-time purchase remains intentionally deferred because the registered Sociobot checkout endpoint still returns the factory-registration 404 documented in verification 4. The site does not advertise an unavailable price, purchase, or restore flow. The free local CLI and all core export/accessibility behavior remain available.
+
+## How to use
+
+```sh
+cargo install --path .
+docx-fidelity demo
+docx-fidelity convert handbook.docx --output migration/
+```
+
+For development, run `npm ci`, `npm test`, `npm run lint`, `npm run build`, and `npm run package`.

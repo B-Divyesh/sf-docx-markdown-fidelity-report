@@ -101,8 +101,8 @@ struct ParseState {
     in_cell: bool,
     paragraph_text: String,
     paragraph_style: Option<String>,
-    list_item: Option<ListItem>,
-    numbering: Numbering,
+    paragraph_list: Option<ParagraphList>,
+    list_counters: HashMap<(String, usize), usize>,
     table_rows: Vec<Vec<String>>,
     table_row: Vec<String>,
     cell_text: String,
@@ -118,25 +118,41 @@ struct ParseState {
     footnote_refs: Vec<String>,
 }
 
-#[derive(Debug, Clone)]
-struct ListItem {
-    num_id: String,
-    level: usize,
-}
-
-/// The subset of Word list formats which Markdown can preserve without a
-/// reviewer having to reconstruct the list's meaning.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum ListFormat {
-    Bullet,
-    Decimal,
-    Other,
-}
-
-#[derive(Debug, Clone, Default)]
+/// Numbering definitions available to paragraphs in `word/document.xml`.
+///
+/// Word stores the paragraph's `numId` separately from the abstract list's
+/// level and number format. Keeping that indirection means a decimal list is
+/// not silently mistaken for a bullet list.
+#[derive(Default)]
 struct Numbering {
-    /// numId -> (level -> Word number format)
-    lists: HashMap<String, HashMap<usize, ListFormat>>,
+    num_to_abstract: HashMap<String, String>,
+    formats: HashMap<(String, usize), ListDefinition>,
+    starts: HashMap<(String, usize), usize>,
+}
+
+impl Numbering {
+    fn definition(&self, num_id: &str, level: usize) -> Option<ListDefinition> {
+        let abstract_id = self.num_to_abstract.get(num_id)?;
+        let mut definition = self.formats.get(&(abstract_id.clone(), level))?.clone();
+        if let Some(start) = self.starts.get(&(num_id.into(), level)) {
+            definition.start = *start;
+        }
+        Some(definition)
+    }
+}
+
+#[derive(Clone)]
+struct ListDefinition {
+    format: String,
+    start: usize,
+}
+
+#[derive(Clone)]
+struct ParagraphList {
+    num_id: Option<String>,
+    level: usize,
+    format: Option<String>,
+    start: usize,
 }
 
 pub fn convert_path(
@@ -243,7 +259,7 @@ fn convert_path_to(
         &document,
         &rels,
         &styles,
-        numbering,
+        &numbering,
         &comments,
         &footnotes,
         &mut archive,
@@ -600,82 +616,80 @@ fn parse_styles(xml: &[u8]) -> Result<HashMap<String, String>> {
     Ok(map)
 }
 
-/// Read Word's list definitions before walking the document body. A paragraph
-/// only carries a `numId` and `ilvl`; the meaning of those values lives here.
 fn parse_numbering(xml: &[u8]) -> Result<Numbering> {
     let mut reader = Reader::from_reader(xml);
-    let mut abstract_levels: HashMap<String, HashMap<usize, ListFormat>> = HashMap::new();
-    let mut num_to_abstract = HashMap::new();
-    let mut abstract_id: Option<String> = None;
-    let mut level: Option<usize> = None;
-    let mut num_id: Option<String> = None;
-
+    let mut numbering = Numbering::default();
+    let mut abstract_id = None;
+    let mut num_id = None;
+    let mut level = None;
+    let mut level_start = 1usize;
+    let mut override_level = None;
     loop {
         match reader.read_event()? {
-            Event::Start(e) => match local_name(e.name().as_ref()) {
-                b"abstractNum" => abstract_id = attr_local(&e, b"abstractNumId"),
-                b"lvl" => level = attr_local(&e, b"ilvl").and_then(|value| value.parse().ok()),
-                b"num" => num_id = attr_local(&e, b"numId"),
-                b"numFmt" => add_list_format(&mut abstract_levels, &abstract_id, level, &e),
-                b"abstractNumId" => {
-                    if let (Some(num), Some(target)) = (num_id.as_ref(), attr_local(&e, b"val")) {
-                        num_to_abstract.insert(num.clone(), target);
-                    }
+            Event::Start(e) if local_name(e.name().as_ref()) == b"abstractNum" => {
+                abstract_id = attr_local(&e, b"abstractNumId");
+            }
+            Event::End(e) if local_name(e.name().as_ref()) == b"abstractNum" => {
+                abstract_id = None;
+            }
+            Event::Start(e) if local_name(e.name().as_ref()) == b"num" => {
+                num_id = attr_local(&e, b"numId");
+            }
+            Event::End(e) if local_name(e.name().as_ref()) == b"num" => {
+                num_id = None;
+            }
+            Event::Start(e) if local_name(e.name().as_ref()) == b"lvl" => {
+                level = attr_local(&e, b"ilvl").and_then(|value| value.parse().ok());
+                level_start = 1;
+            }
+            Event::End(e) if local_name(e.name().as_ref()) == b"lvl" => level = None,
+            Event::Start(e) if local_name(e.name().as_ref()) == b"lvlOverride" => {
+                override_level = attr_local(&e, b"ilvl").and_then(|value| value.parse().ok());
+            }
+            Event::End(e) if local_name(e.name().as_ref()) == b"lvlOverride" => {
+                override_level = None;
+            }
+            Event::Empty(e) | Event::Start(e) if local_name(e.name().as_ref()) == b"start" => {
+                level_start = attr_local(&e, b"val")
+                    .and_then(|value| value.parse().ok())
+                    .unwrap_or(1);
+            }
+            Event::Empty(e) | Event::Start(e)
+                if local_name(e.name().as_ref()) == b"startOverride" =>
+            {
+                if let (Some(num), Some(override_level), Some(start)) = (
+                    num_id.clone(),
+                    override_level,
+                    attr_local(&e, b"val").and_then(|value| value.parse().ok()),
+                ) {
+                    numbering.starts.insert((num, override_level), start);
                 }
-                _ => {}
-            },
-            Event::Empty(e) => match local_name(e.name().as_ref()) {
-                b"numFmt" => add_list_format(&mut abstract_levels, &abstract_id, level, &e),
-                b"abstractNumId" => {
-                    if let (Some(num), Some(target)) = (num_id.as_ref(), attr_local(&e, b"val")) {
-                        num_to_abstract.insert(num.clone(), target);
-                    }
+            }
+            Event::Empty(e) | Event::Start(e)
+                if local_name(e.name().as_ref()) == b"abstractNumId" =>
+            {
+                if let (Some(num), Some(abstract_num)) = (num_id.clone(), attr_local(&e, b"val")) {
+                    numbering.num_to_abstract.insert(num, abstract_num);
                 }
-                _ => {}
-            },
-            Event::End(e) => match local_name(e.name().as_ref()) {
-                b"abstractNum" => abstract_id = None,
-                b"lvl" => level = None,
-                b"num" => num_id = None,
-                _ => {}
-            },
+            }
+            Event::Empty(e) | Event::Start(e) if local_name(e.name().as_ref()) == b"numFmt" => {
+                if let (Some(abstract_num), Some(list_level), Some(format)) =
+                    (abstract_id.clone(), level, attr_local(&e, b"val"))
+                {
+                    numbering.formats.insert(
+                        (abstract_num, list_level),
+                        ListDefinition {
+                            format,
+                            start: level_start,
+                        },
+                    );
+                }
+            }
             Event::Eof => break,
             _ => {}
         }
     }
-
-    let lists = num_to_abstract
-        .into_iter()
-        .filter_map(|(num, abstract_num)| {
-            abstract_levels
-                .get(&abstract_num)
-                .cloned()
-                .map(|levels| (num, levels))
-        })
-        .collect();
-    Ok(Numbering { lists })
-}
-
-fn add_list_format(
-    abstract_levels: &mut HashMap<String, HashMap<usize, ListFormat>>,
-    abstract_id: &Option<String>,
-    level: Option<usize>,
-    e: &BytesStart<'_>,
-) {
-    let (Some(abstract_id), Some(level), Some(value)) =
-        (abstract_id.as_ref(), level, attr_local(e, b"val"))
-    else {
-        return;
-    };
-    let format = match value.as_str() {
-        "bullet" => ListFormat::Bullet,
-        "decimal" => ListFormat::Decimal,
-        _ => ListFormat::Other,
-    };
-    abstract_levels
-        .entry(abstract_id.clone())
-        .or_default()
-        .insert(level, format);
+    Ok(numbering)
 }
 
 fn parse_notes(xml: &[u8], element: &str) -> Result<HashMap<String, String>> {
@@ -710,7 +724,7 @@ fn parse_document<R: Read + Seek>(
     xml: &[u8],
     rels: &HashMap<String, String>,
     styles: &HashMap<String, String>,
-    numbering: Numbering,
+    numbering: &Numbering,
     comments: &HashMap<String, String>,
     _footnotes: &HashMap<String, String>,
     archive: &mut ZipArchive<R>,
@@ -718,26 +732,19 @@ fn parse_document<R: Read + Seek>(
 ) -> Result<ParseState> {
     let mut reader = Reader::from_reader(xml);
     reader.config_mut().trim_text(false);
-    let mut s = ParseState {
-        numbering,
-        ..ParseState::default()
-    };
+    let mut s = ParseState::default();
     loop {
         match reader
             .read_event()
             .context("word/document.xml is malformed")?
         {
-            Event::Start(e) => {
-                handle_start(&e, &mut s, rels, styles, comments, archive, media_dir)?
-            }
-            Event::Empty(e) => {
-                handle_empty(&e, &mut s, rels, styles, comments, archive, media_dir)?
-            }
+            Event::Start(e) => handle_start(
+                &e, &mut s, rels, styles, numbering, comments, archive, media_dir,
+            )?,
+            Event::Empty(e) => handle_empty(
+                &e, &mut s, rels, styles, numbering, comments, archive, media_dir,
+            )?,
             Event::Text(e) if s.in_text && !s.in_deleted_text && s.deleted_depth == 0 => {
-                // Escape Word-authored text as it enters the buffer. The
-                // buffer also receives Markdown generated by this converter
-                // (links, emphasis, images and notes), so escaping at the
-                // end would corrupt converter-authored syntax.
                 let value = escape_markdown_source(&e.unescape()?);
                 if s.in_cell {
                     s.cell_text.push_str(&value);
@@ -753,11 +760,13 @@ fn parse_document<R: Read + Seek>(
     Ok(s)
 }
 
+#[allow(clippy::too_many_arguments)]
 fn handle_start<R: Read + Seek>(
     e: &BytesStart<'_>,
     s: &mut ParseState,
     rels: &HashMap<String, String>,
     styles: &HashMap<String, String>,
+    numbering: &Numbering,
     comments: &HashMap<String, String>,
     archive: &mut ZipArchive<R>,
     media_dir: &Path,
@@ -770,7 +779,7 @@ fn handle_start<R: Read + Seek>(
             s.in_paragraph = true;
             s.paragraph_text.clear();
             s.paragraph_style = None;
-            s.list_item = None;
+            s.paragraph_list = None;
         }
         b"r" => {
             let length = if s.in_cell {
@@ -783,6 +792,9 @@ fn handle_start<R: Read + Seek>(
             s.run_italic = false;
         }
         b"t" => s.in_text = true,
+        b"numPr" => start_list(s),
+        b"numId" => set_list_num_id(e, s, numbering),
+        b"ilvl" => set_list_level(e, s, numbering),
         b"delText" => s.in_deleted_text = true,
         b"tbl" => {
             s.table += 1;
@@ -817,20 +829,20 @@ fn handle_start<R: Read + Seek>(
         b"txbxContent" => inline_loss_finding("text box", s),
         b"fldSimple" | b"instrText" => inline_loss_finding("field", s),
         b"pict" => inline_loss_finding("legacy drawing", s),
-        b"numId" => set_list_num_id(e, s),
-        b"ilvl" => set_list_level(e, s),
         _ => {
-            let _ = styles;
+            let _ = (styles, numbering);
         }
     }
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 fn handle_empty<R: Read + Seek>(
     e: &BytesStart<'_>,
     s: &mut ParseState,
     rels: &HashMap<String, String>,
     styles: &HashMap<String, String>,
+    numbering: &Numbering,
     comments: &HashMap<String, String>,
     archive: &mut ZipArchive<R>,
     media_dir: &Path,
@@ -853,8 +865,9 @@ fn handle_empty<R: Read + Seek>(
                 }
             }
         }
-        b"numId" => set_list_num_id(e, s),
-        b"ilvl" => set_list_level(e, s),
+        b"numPr" => start_list(s),
+        b"numId" => set_list_num_id(e, s, numbering),
+        b"ilvl" => set_list_level(e, s, numbering),
         b"tab" => {
             if s.in_cell {
                 s.cell_text.push('\t')
@@ -883,31 +896,10 @@ fn handle_empty<R: Read + Seek>(
         b"fldSimple" | b"instrText" => inline_loss_finding("field", s),
         b"pict" => inline_loss_finding("legacy drawing", s),
         _ => {
-            let _ = styles;
+            let _ = (styles, numbering);
         }
     }
     Ok(())
-}
-
-fn set_list_num_id(e: &BytesStart<'_>, s: &mut ParseState) {
-    if let Some(num_id) = attr_local(e, b"val") {
-        let level = s.list_item.as_ref().map_or(0, |item| item.level);
-        s.list_item = Some(ListItem { num_id, level });
-    }
-}
-
-fn set_list_level(e: &BytesStart<'_>, s: &mut ParseState) {
-    let level = attr_local(e, b"val")
-        .and_then(|value| value.parse().ok())
-        .unwrap_or(0);
-    if let Some(item) = &mut s.list_item {
-        item.level = level;
-    } else {
-        s.list_item = Some(ListItem {
-            num_id: "unknown".into(),
-            level,
-        });
-    }
 }
 
 fn handle_end(name: &[u8], s: &mut ParseState, styles: &HashMap<String, String>) {
@@ -924,7 +916,9 @@ fn handle_end(name: &[u8], s: &mut ParseState, styles: &HashMap<String, String>)
                 s.paragraph_text.trim().to_owned()
             };
             if !s.in_cell && !text.is_empty() {
-                let prefix = paragraph_prefix(s);
+                let style = s.paragraph_style.clone();
+                let list = s.paragraph_list.clone();
+                let prefix = paragraph_prefix(style.as_deref(), list.as_ref(), s);
                 s.markdown.push_str(&format!("{prefix}{text}\n\n"));
             }
             if let Some(style_id) = s.paragraph_style.take() {
@@ -942,6 +936,7 @@ fn handle_end(name: &[u8], s: &mut ParseState, styles: &HashMap<String, String>)
                     ));
                 }
             }
+            s.paragraph_list = None;
             s.in_paragraph = false;
         }
         b"tc" => {
@@ -958,61 +953,118 @@ fn handle_end(name: &[u8], s: &mut ParseState, styles: &HashMap<String, String>)
     }
 }
 
-fn paragraph_prefix(s: &mut ParseState) -> String {
-    if let Some(item) = s.list_item.clone() {
-        let indent = "    ".repeat(item.level);
-        match s
-            .numbering
-            .lists
-            .get(&item.num_id)
-            .and_then(|levels| levels.get(&item.level))
-            .copied()
-        {
-            Some(ListFormat::Bullet) => return format!("{indent}- "),
-            Some(ListFormat::Decimal) => return format!("{indent}1. "),
-            Some(ListFormat::Other) => {
+fn paragraph_prefix(
+    style: Option<&str>,
+    list: Option<&ParagraphList>,
+    s: &mut ParseState,
+) -> String {
+    if let Some(list) = list {
+        let indent = "    ".repeat(list.level);
+        return match list.format.as_deref() {
+            Some("bullet") => format!("{indent}- "),
+            Some("decimal") => format!("{indent}{}. ", next_list_number(s, list)),
+            Some(format) => {
                 s.findings.push(finding(
                     "lists",
                     Severity::Warning,
                     format!(
-                        "List {}/level {} uses a Word numbering format Markdown cannot preserve exactly.",
-                        item.num_id, item.level
+                        "List format `{}` was rendered as a decimal Markdown list.",
+                        safe_display_name(format)
                     ),
-                    "Check the list marker and sequence in the Markdown.",
+                    "Check list markers and nesting against the Word document.",
                     s,
                 ));
-                return format!("{indent}1. ");
+                format!("{indent}{}. ", next_list_number(s, list))
             }
             None => {
+                let num_id = list.num_id.as_deref().unwrap_or("unknown");
                 s.findings.push(finding(
                     "lists",
                     Severity::Warning,
                     format!(
-                        "List {}/level {} has no readable numbering definition.",
-                        item.num_id, item.level
+                        "List numId `{}` at level {} has no recognized numbering definition; it was rendered as a bullet list.",
+                        safe_display_name(num_id),
+                        list.level
                     ),
-                    "Check whether this list is ordered or unordered in Word.",
+                    "Check list order, marker type, and nesting against the Word document.",
                     s,
                 ));
-                return format!("{indent}- ");
+                format!("{indent}- ")
             }
-        }
+        };
     }
-    match s
-        .paragraph_style
-        .as_deref()
-        .unwrap_or("")
-        .to_ascii_lowercase()
-        .as_str()
-    {
+    match style.unwrap_or("").to_ascii_lowercase().as_str() {
         "heading1" | "title" => "# ".into(),
         "heading2" => "## ".into(),
         "heading3" => "### ".into(),
         "heading4" => "#### ".into(),
         "heading5" => "##### ".into(),
         "heading6" => "###### ".into(),
-        _ => String::new(),
+        _ => "".into(),
     }
+}
+
+fn next_list_number(s: &mut ParseState, list: &ParagraphList) -> usize {
+    let key = (
+        list.num_id.clone().unwrap_or_else(|| "unknown".into()),
+        list.level,
+    );
+    let next = s.list_counters.entry(key).or_insert(0);
+    if *next == 0 {
+        *next = list.start.saturating_sub(1);
+    }
+    *next += 1;
+    *next
+}
+
+fn start_list(s: &mut ParseState) {
+    s.paragraph_list = Some(ParagraphList {
+        num_id: None,
+        level: 0,
+        format: None,
+        start: 1,
+    });
+}
+
+fn set_list_num_id(e: &BytesStart<'_>, s: &mut ParseState, numbering: &Numbering) {
+    if s.paragraph_list.is_none() {
+        start_list(s);
+    }
+    let num_id = attr_local(e, b"val");
+    if num_id.as_deref() == Some("0") {
+        s.paragraph_list = None;
+        return;
+    }
+    if let Some(list) = s.paragraph_list.as_mut() {
+        list.num_id = num_id;
+    }
+    resolve_list_format(s, numbering);
+}
+
+fn set_list_level(e: &BytesStart<'_>, s: &mut ParseState, numbering: &Numbering) {
+    if s.paragraph_list.is_none() {
+        start_list(s);
+    }
+    if let Some(list) = s.paragraph_list.as_mut() {
+        list.level = attr_local(e, b"val")
+            .and_then(|value| value.parse().ok())
+            .unwrap_or(0);
+    }
+    resolve_list_format(s, numbering);
+}
+
+fn resolve_list_format(s: &mut ParseState, numbering: &Numbering) {
+    let Some(list) = s.paragraph_list.as_mut() else {
+        return;
+    };
+    let definition = list
+        .num_id
+        .as_deref()
+        .and_then(|num_id| numbering.definition(num_id, list.level));
+    list.format = definition
+        .as_ref()
+        .map(|definition| definition.format.clone());
+    list.start = definition.map(|definition| definition.start).unwrap_or(1);
 }
 
 fn render_table(s: &mut ParseState) {
@@ -1436,7 +1488,6 @@ fn build_report(input: &Path, findings: Vec<Finding>) -> FidelityReport {
     }
     for category in [
         "tables",
-        "lists",
         "comments",
         "revisions",
         "embedded_objects",
@@ -1614,26 +1665,42 @@ fn is_supported_style(id: &str, name: &str) -> bool {
         || name.starts_with("heading")
         || name.starts_with("list")
 }
-/// Escape text that originated in a Word text node. This is intentionally
-/// separate from Markdown assembled by the converter: escaping a finished
-/// paragraph would turn valid generated links, emphasis, image references and
-/// note markers back into literal characters.
+/// Escape text that came from a Word text node before it is inserted into
+/// converter-authored Markdown. Formatting, links, image references, and
+/// headings are composed later, so their Markdown syntax remains active while
+/// a literal Word paragraph can never become a heading, link, list, quote,
+/// code span, or table by accident.
 fn escape_markdown_source(text: &str) -> String {
     let mut escaped = String::with_capacity(text.len());
     for character in text.chars() {
-        match character {
-            '\0' => {}
-            // These characters can introduce Markdown blocks, emphasis,
-            // links, code, tables, raw HTML, images, entities, or a GFM
-            // autolink. Escaping all potential markers also remains safe if
-            // Word splits a leading list marker across text runs.
-            '\\' | '!' | '#' | '&' | '(' | ')' | '*' | '+' | '-' | '.' | '/' | ':' | '<' | '='
-            | '>' | '@' | '[' | ']' | '_' | '`' | '{' | '|' | '}' | '~' => {
-                escaped.push('\\');
-                escaped.push(character);
-            }
-            _ => escaped.push(character),
+        if character == '\0' {
+            continue;
         }
+        if matches!(
+            character,
+            '\\' | '`'
+                | '*'
+                | '_'
+                | '{'
+                | '}'
+                | '['
+                | ']'
+                | '<'
+                | '>'
+                | '#'
+                | '+'
+                | '-'
+                | '.'
+                | '!'
+                | '|'
+                | '~'
+                | '='
+                | '('
+                | ')'
+        ) {
+            escaped.push('\\');
+        }
+        escaped.push(character);
     }
     escaped
 }
@@ -1786,77 +1853,75 @@ mod tests {
     }
 
     #[test]
-    fn regression_plain_word_markdown_syntax_stays_literal() {
+    fn plain_word_markdown_syntax_is_escaped_without_muting_converter_markup() {
         let root = tempdir().unwrap();
         let input = root.path().join("plain-markdown-syntax.docx");
         let output = root.path().join("output");
         let document = r#"<w:document xmlns:w="urn:word"><w:body>
-            <w:p><w:r><w:t># Plain Word paragraph</w:t></w:r></w:p>
-            <w:p><w:r><w:t>[payroll](https://attacker.example)</w:t></w:r></w:p>
-            <w:p><w:r><w:t>- Plain dash paragraph</w:t></w:r></w:p>
-            <w:p><w:r><w:t>1</w:t></w:r><w:r><w:t>. Split numbered paragraph</w:t></w:r></w:p>
-            <w:p><w:r><w:t>`literal code`</w:t></w:r></w:p>
-            <w:p><w:r><w:t>&gt; Plain quote</w:t></w:r></w:p>
-            <w:p><w:r><w:t>| Plain table syntax |</w:t></w:r></w:p>
+          <w:p><w:r><w:t># Plain Word paragraph</w:t></w:r></w:p>
+          <w:p><w:r><w:t>[payroll](https://attacker.example)</w:t></w:r></w:p>
+          <w:p><w:r><w:t>- Plain dash paragraph</w:t></w:r></w:p>
+          <w:p><w:r><w:t>`literal code`</w:t></w:r></w:p>
+          <w:p><w:r><w:t>&gt; Plain quote</w:t></w:r></w:p>
+          <w:p><w:r><w:t>| Source | table syntax |</w:t></w:r></w:p>
+          <w:p><w:r><w:t>1. Plain ordered marker</w:t></w:r></w:p>
+          <w:p><w:pPr><w:pStyle w:val="Heading1"/></w:pPr><w:r><w:t>Semantic heading</w:t></w:r></w:p>
         </w:body></w:document>"#;
         write_docx(&input, document, &[]);
 
         let result = convert_path(&input, &output, &ConvertOptions::default()).unwrap();
-        let markdown = fs::read_to_string(output.join("plain-markdown-syntax.md")).unwrap();
+        let markdown = fs::read_to_string(&result.markdown_path).unwrap();
 
-        assert_eq!(result.report.status, ReportStatus::Clear);
-        assert!(result.report.findings.is_empty());
         assert!(markdown.contains(r"\# Plain Word paragraph"));
-        assert!(markdown.contains(r"\[payroll\]\(https\:\/\/attacker\.example\)"));
+        assert!(markdown.contains(r"\[payroll\]\(https://attacker\.example\)"));
         assert!(markdown.contains(r"\- Plain dash paragraph"));
-        assert!(markdown.contains(r"1\. Split numbered paragraph"));
         assert!(markdown.contains(r"\`literal code\`"));
         assert!(markdown.contains(r"\> Plain quote"));
-        assert!(markdown.contains(r"\| Plain table syntax \|"));
+        assert!(markdown.contains(r"\| Source \| table syntax \|"));
+        assert!(markdown.contains(r"1\. Plain ordered marker"));
+        assert!(!markdown.contains("\n# Plain Word paragraph"));
+        assert!(markdown.contains("# Semantic heading"));
+        assert_eq!(result.report.status, ReportStatus::Clear);
+        assert!(result.report.findings.is_empty());
     }
 
     #[test]
-    fn regression_word_numbering_preserves_order_type_and_nesting() {
+    fn decimal_numbering_and_nesting_are_preserved_from_numbering_xml() {
         let root = tempdir().unwrap();
-        let input = root.path().join("numbered-steps.docx");
+        let input = root.path().join("decimal-list.docx");
         let output = root.path().join("output");
         let document = r#"<w:document xmlns:w="urn:word"><w:body>
-            <w:p><w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="42"/></w:numPr></w:pPr><w:r><w:t>First required step</w:t></w:r></w:p>
-            <w:p><w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="42"/></w:numPr></w:pPr><w:r><w:t>Second required step</w:t></w:r></w:p>
-            <w:p><w:pPr><w:numPr><w:ilvl w:val="1"/><w:numId w:val="42"/></w:numPr></w:pPr><w:r><w:t>Nested check</w:t></w:r></w:p>
+          <w:p><w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="42"/></w:numPr></w:pPr><w:r><w:t>First required step</w:t></w:r></w:p>
+          <w:p><w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="42"/></w:numPr></w:pPr><w:r><w:t>Second required step</w:t></w:r></w:p>
+          <w:p><w:pPr><w:numPr><w:ilvl w:val="1"/><w:numId w:val="42"/></w:numPr></w:pPr><w:r><w:t>Nested check</w:t></w:r></w:p>
         </w:body></w:document>"#;
         let numbering = br#"<w:numbering xmlns:w="urn:word">
-            <w:abstractNum w:abstractNumId="7">
-              <w:lvl w:ilvl="0"><w:numFmt w:val="decimal"/></w:lvl>
-              <w:lvl w:ilvl="1"><w:numFmt w:val="bullet"/></w:lvl>
-            </w:abstractNum>
-            <w:num w:numId="42"><w:abstractNumId w:val="7"/></w:num>
+          <w:abstractNum w:abstractNumId="7"><w:lvl w:ilvl="0"><w:start w:val="3"/><w:numFmt w:val="decimal"/></w:lvl><w:lvl w:ilvl="1"><w:numFmt w:val="bullet"/></w:lvl></w:abstractNum>
+          <w:num w:numId="42"><w:abstractNumId w:val="7"/></w:num>
         </w:numbering>"#;
         write_docx(&input, document, &[("word/numbering.xml", numbering)]);
 
         let result = convert_path(&input, &output, &ConvertOptions::default()).unwrap();
-        let markdown = fs::read_to_string(output.join("numbered-steps.md")).unwrap();
+        let markdown = fs::read_to_string(&result.markdown_path).unwrap();
 
+        assert!(markdown.contains("3. First required step\n\n4. Second required step"));
+        assert!(markdown.contains("    - Nested check"));
+        assert!(!markdown.contains("- First required step"));
         assert_eq!(result.report.status, ReportStatus::Clear);
         assert!(result.report.findings.is_empty());
-        assert!(markdown.contains("1. First required step"));
-        assert!(markdown.contains("1. Second required step"));
-        assert!(markdown.contains("    - Nested check"));
     }
 
     #[test]
-    fn unsupported_word_numbering_is_source_located_for_review() {
+    fn unknown_numbering_is_reported_at_its_source_location() {
         let root = tempdir().unwrap();
-        let input = root.path().join("letter-list.docx");
+        let input = root.path().join("unknown-list.docx");
         let output = root.path().join("output");
-        let document = r#"<w:document xmlns:w="urn:word"><w:body><w:p><w:pPr><w:numPr><w:numId w:val="9"/></w:numPr></w:pPr><w:r><w:t>Lettered item</w:t></w:r></w:p></w:body></w:document>"#;
-        let numbering = br#"<w:numbering xmlns:w="urn:word"><w:abstractNum w:abstractNumId="1"><w:lvl w:ilvl="0"><w:numFmt w:val="upperLetter"/></w:lvl></w:abstractNum><w:num w:numId="9"><w:abstractNumId w:val="1"/></w:num></w:numbering>"#;
-        write_docx(&input, document, &[("word/numbering.xml", numbering)]);
+        let document = r#"<w:document xmlns:w="urn:word"><w:body><w:p><w:pPr><w:numPr><w:numId w:val="999"/></w:numPr></w:pPr><w:r><w:t>Check this marker</w:t></w:r></w:p></w:body></w:document>"#;
+        write_docx(&input, document, &[]);
 
         let result = convert_path(&input, &output, &ConvertOptions::default()).unwrap();
 
         assert_eq!(result.report.status, ReportStatus::Review);
-        assert_eq!(result.report.counts["lists"], 1);
         assert!(result.report.findings.iter().any(|finding| {
             finding.category == "lists"
                 && finding.location.part == "word/document.xml"

@@ -2,51 +2,30 @@
   {
     "id": "demo-conversion",
     "claim": "The demo converts a bundled DOCX and writes Markdown plus a fidelity report.",
-    "where": "landing install recording, demo, README",
+    "where": "landing first screen, demo, README",
     "test": "npm test -- --grep @claim:demo-conversion",
     "sandbox": "fresh temporary directory; bundled sample; assert Markdown and report files plus review findings"
-  },
-  {
-    "id": "demo-sandbox",
-    "claim": "Demo sample data is isolated; reset and leaving demo clear only demo storage.",
-    "where": "demo banner, privacy, .factory/demo.md",
-    "test": "npm test -- --grep @claim:demo-sandbox",
-    "sandbox": "fresh browser context; set demo: and real: keys; reset then leave; assert only demo: keys are removed"
   },
   {
     "id": "local-processing",
     "claim": "Document conversion runs locally and sends no document data over the network.",
     "where": "landing facts, privacy, README",
     "test": "npm test -- --grep @claim:local-processing",
-    "sandbox": "fresh browser context on /demo; record requests; run the CLI with unreachable HTTP proxies"
+    "sandbox": "fresh browser context on /demo; intercept requests and assert only same-origin site assets load"
   },
   {
     "id": "risk-ledger",
     "claim": "Reports list tables, comments, revisions, embedded objects, footnotes, styles, and image outcomes with source locations.",
     "where": "landing preview, README",
     "test": "npm test -- --grep @claim:risk-ledger",
-    "sandbox": "bundled complex DOCX fixture; assert every listed category and source location in the JSON report"
+    "sandbox": "bundled complex DOCX fixture; assert every construct category and source location in JSON report"
   },
   {
-    "id": "source-text-fidelity",
-    "claim": "Plain Word text that looks like Markdown stays literal in the output.",
-    "where": "README fidelity statement",
-    "test": "npm test -- --grep @claim:source-text-fidelity",
-    "sandbox": "synthetic DOCX with headings, links, lists, code, blockquotes, and table syntax as plain text; assert escaped Markdown and a clear report"
-  },
-  {
-    "id": "list-fidelity",
-    "claim": "Decimal, bullet, and nested Word lists keep their Markdown list type and nesting.",
-    "where": "README output description",
-    "test": "npm test -- --grep @claim:list-fidelity",
-    "sandbox": "synthetic DOCX plus numbering.xml; assert ordered, unordered, nested Markdown and a clear report"
-  },
-  {
-    "id": "human-checklist",
-    "claim": "Each conversion writes a separate human review checklist with source locations.",
-    "where": "landing steps, README",
-    "test": "npm test -- --grep @claim:human-checklist",
-    "sandbox": "bundled sample conversion; assert the separate .fidelity.md contains the checklist, locations, and checkboxes"
+    "id": "source-fidelity",
+    "claim": "Literal Word text stays literal in Markdown; ordered, bullet, and nested lists are preserved or source-located for review.",
+    "where": "landing report preview, README",
+    "test": "npm test -- --grep @claim:source-fidelity",
+    "sandbox": "fresh DOCX fixtures with Markdown-looking text, decimal and nested numbering.xml definitions, and an unknown list; assert literal output, preserved list syntax, and a source-located loss finding"
   },
   {
     "id": "batch-conversion",
@@ -58,43 +37,50 @@
   {
     "id": "ci-policy",
     "claim": "CI policy gates stop a conversion at selected risk levels without a network connection.",
-    "where": "landing policy gates, terms, README",
+    "where": "landing policy gates, README",
     "test": "npm test -- --grep @claim:ci-policy",
     "sandbox": "bundled complex DOCX with blocked findings; assert --fail-on exits 3 while HTTP proxies are unreachable"
   },
   {
+    "id": "safe-input",
+    "claim": "The CLI limits ZIP and XML parts, rejects unsafe archive paths, and never extracts embedded objects or macros.",
+    "where": "landing boundaries, README",
+    "test": "npm test -- --grep @claim:safe-input",
+    "sandbox": "malicious path, embedded-object/macro, 32 MiB plus one byte, and 10,001-entry DOCX fixtures; assert safe failure and no binary extraction"
+  },
+  {
+    "id": "demo-isolation",
+    "claim": "Demo sample data is not saved; Reset demo and Start for real clear only demo state.",
+    "where": "demo banner, privacy, README, .factory/demo.md",
+    "test": "npm test -- --grep @claim:demo-isolation",
+    "sandbox": "fresh browser demo context; seed demo: and real: keys, activate Reset demo and Start for real, and assert only demo: keys are removed"
+  },
+  {
+    "id": "review-checklist",
+    "claim": "Each conversion writes a separate human review checklist.",
+    "where": "landing steps, README",
+    "test": "npm test -- --grep @claim:review-checklist",
+    "sandbox": "CLI demo from a fresh temporary directory; assert the generated .fidelity.md file contains a review checklist and finding checkboxes"
+  },
+  {
     "id": "single-binary",
-    "claim": "The release build produces the documented single docx-fidelity CLI executable.",
+    "claim": "The release build produces one Rust CLI binary.",
     "where": "landing install section, README",
     "test": "npm test -- --grep @claim:single-binary",
-    "sandbox": "locked release build; assert the executable exists and reports its version"
+    "sandbox": "locked release build; assert target/release/docx-fidelity exists and reports its version"
   },
   {
     "id": "rust-toolchain",
-    "claim": "The locked package builds with stable Rust 1.88 or newer.",
-    "where": "README install section, Cargo.toml",
+    "claim": "Stable Rust 1.88 or newer builds the locked package.",
+    "where": "README install and verification instructions, Cargo.toml",
     "test": "npm test -- --grep @claim:rust-toolchain",
-    "sandbox": "install Rust 1.88.0 minimal profile; run cargo +1.88.0 test --locked"
-  },
-  {
-    "id": "bounded-input",
-    "claim": "The CLI rejects ZIP or XML parts larger than 32 MiB before writing output.",
-    "where": "landing boundaries, README",
-    "test": "npm test -- --grep @claim:bounded-input",
-    "sandbox": "synthetic DOCX with a 32 MiB + 1 byte part; assert exit 2 and no Markdown output"
-  },
-  {
-    "id": "safe-input",
-    "claim": "The CLI rejects unsafe archive paths and reports, but never extracts or executes, embedded files and macros.",
-    "where": "landing boundaries, README",
-    "test": "npm test -- --grep @claim:safe-input",
-    "sandbox": "malicious path, embedded-object, and macro DOCX fixtures; assert rejection or source-located report without extracted payloads"
+    "sandbox": "run cargo +1.88.0 test --locked --lib and assert the locked library test suite passes"
   },
   {
     "id": "scope-boundaries",
-    "claim": "The CLI leaves source DOCX files unchanged and accepts DOCX rather than PDF or image input.",
-    "where": "landing boundaries, terms, README",
+    "claim": "The CLI leaves source DOCX files unchanged and offers no OCR, document editing, or PDF conversion command.",
+    "where": "landing boundaries, README, terms",
     "test": "npm test -- --grep @claim:scope-boundaries",
-    "sandbox": "copy the bundled source before conversion; compare bytes after conversion; assert PDF and PNG input exit 2"
+    "sandbox": "convert a copied bundled DOCX, byte-compare the source before and after, and assert CLI help has no OCR, edit, or PDF command"
   }
 ]

@@ -75,10 +75,11 @@ The converter rejects ZIP or XML parts larger than 32 MiB and rejects unsafe arc
 ## Develop and verify
 
 ```sh
-npm install
+npm ci
 npm test
 npm run build
 npm run package
+cargo +1.88.0 test --locked
 ```
 
 `npm test` runs Rust unit and integration tests plus browser claim tests. `npm run build` produces the release binary and the static site at `dist/site/`. `npm run package` creates the publishable crate without sending it to a registry.

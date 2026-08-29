@@ -1,6 +1,6 @@
 # Landing page copy audit
 
-Audited 2026-08-29. Counts treat hyphenated commands as one word. Fragments, labels, navigation, table cells, and buttons are included because visitors hear them as interface copy.
+Audited 2026-08-29 for v0.1.2. Counts treat hyphenated commands as one word. Fragments, labels, navigation, table cells, and buttons are included because visitors hear them as interface copy.
 
 | Copy | Words | Result |
 | --- | ---: | --- |
@@ -16,7 +16,6 @@ Audited 2026-08-29. Counts treat hyphenated commands as one word. Fragments, lab
 | See a complex file convert, then inspect its risk ledger. | 10 | Pass |
 | Runs on your computer. | 4 | Pass |
 | Document data stays local. | 4 | Pass |
-| Free conversion. | 2 | Pass |
 | CI policy gates are included. | 5 | Pass |
 | Every pin becomes a source-located finding. | 7 | Pass |
 | Sample report · North Ridge guide | 5 | Pass |

@@ -16,7 +16,7 @@ const footer = () => `
   <footer>
     <p>Convert DOCX and map every review risk.</p>
     <nav aria-label="Footer navigation"><a href="/privacy" data-link>Privacy</a><a href="/terms" data-link>Terms</a><a href="https://sociobot.in/" rel="external">Built by Param Factory <span class="sr-only">(external)</span></a></nav>
-    <p class="build">v0.1.1 · build 2026.08.29</p>
+    <p class="build">v0.1.2 · build 2026.08.29</p>
   </footer>`;
 
 const contour = `<svg class="contours" viewBox="0 0 900 300" aria-hidden="true"><path d="M-30 240C130 100 220 315 385 175S680 40 940 135"/><path d="M-25 208C125 78 225 280 380 148S680 16 935 105"/><path d="M-20 176C120 56 230 245 375 121S680-8 930 75"/></svg>`;
