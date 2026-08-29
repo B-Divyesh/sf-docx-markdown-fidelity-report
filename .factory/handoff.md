@@ -1,10 +1,11 @@
 # Handoff — repair 4
 
-## Release status: ready to deploy
+## Release status: deployed
 
 - Work order: `docx-markdown-fidelity-report-repair-4`
 - Base verifier report: `.factory/verification-4.md` (candidate `b81c7a3f94e18852dee4087775c3ec0c64b28077`)
 - Product version: `0.1.2`
+- Repair commit: `edcf6e9` (pushed to `origin/main`)
 - Artifact and deployment class: Rust CLI with a static Vite documentation/demo site
 - Planned live URL: <https://docx-markdown-fidelity-report.sociobot.in>
 
@@ -40,7 +41,13 @@ cargo +1.88.0 test --locked
 
 ## Deployment and live checks
 
-Deployment and live identity evidence will be appended after the committed repair is pushed and `deploy-static.sh` finishes.
+- Deployed with `/opt/fleet/lib/deploy-static.sh docx-markdown-fidelity-report dist/site` on 2026-08-29 UTC. Azure Static Web Apps deployment ID: `b5f6b14e-e867-405e-ae26-62e9805cb031`.
+- The managed custom domain is live: <https://docx-markdown-fidelity-report.sociobot.in>.
+- Live root HTML exactly matches `dist/site/index.html`: SHA-256 `9c4c1d8961d558f366d5038e9b775c52fe93d6993a4d4de9c516fc1472fa1039`.
+- Live JavaScript exactly matches `dist/site/assets/index-1Et7zbOo.js`: SHA-256 `58eba58bf333356b1498158db79441f14b9ad8d4a7495d81bdab4d742b39b865`.
+- Live `/`, `/demo`, `/privacy`, and `/terms` returned 200; `/not-a-route` returned the designed HTTP 404.
+- `verify-url.sh` passed live with no console errors, correct title/lang/main/H1/alt data, and a 679 ms load. Evidence is `.factory/repair-4/live-verify/`.
+- Response policy is live: header-delivered CSP includes `frame-ancestors 'none'`; HSTS, `nosniff`, Referrer-Policy, and Permissions-Policy are present. The hashed JS response is `public, max-age=31536000, immutable`.
 
 ## Known gap
 
