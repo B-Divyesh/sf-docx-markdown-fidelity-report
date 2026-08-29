@@ -6,6 +6,6 @@
   "user": "Teams inheriting Word-heavy documentation who need to convert it to Markdown while knowing exactly which tables, tracked changes, comments, images, and styles need human review.",
   "smallest_useful_product": "Local CLI that converts DOCX directly to Markdown and emits a per-file fidelity report listing tables, comments, revisions, embedded objects, footnotes, styles, and image extraction outcomes.",
   "success_measure": "Every unsupported or lossy construct is reported with its source location before output is accepted.",
-  "monetization": "one-time",
-  "constraints": "Treat documents as untrusted; do not execute embedded content; preserve filenames safely; no OCR, document editing, PDF round-tripping, or hosted conversion."
+  "monetization": "free-open-source",
+  "constraints": "Treat documents as untrusted; do not execute embedded content; preserve filenames safely; no OCR, document editing, PDF round-tripping, or hosted conversion. The researched one-time purchase was formally removed on 2026-08-29 after the factory billing endpoint for this slug returned its documented registration 404; the shipped product is an honest, fully usable free MIT CLI."
 }

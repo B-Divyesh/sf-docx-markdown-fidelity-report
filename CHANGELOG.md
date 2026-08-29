@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.3 — 2026-08-29
+
+- Use the full product name and literal fidelity-report wording across the site and documentation.
+- Add the isolated `?demo=1` entry with reset and start-for-real controls.
+- Formally set the product scope to a fully usable free MIT CLI after the unavailable factory checkout registration was verified.
+
 ## 0.1.2 — 2026-08-29
 
 - Escape literal Word text so it cannot become active Markdown syntax.

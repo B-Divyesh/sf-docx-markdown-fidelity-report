@@ -13,7 +13,7 @@ const VERIFY_URL: &str =
     "https://api.sociobot.in/api/v1/products/docx-markdown-fidelity-report/verify";
 
 #[derive(Parser)]
-#[command(name = "docx-fidelity", version, about = "Convert DOCX to Markdown and map every fidelity risk", long_about = None)]
+#[command(name = "docx-fidelity", version, about = "Convert DOCX to Markdown and list fidelity issues", long_about = None)]
 struct Cli {
     /// Print one JSON command summary to stdout.
     #[arg(long, global = true)]

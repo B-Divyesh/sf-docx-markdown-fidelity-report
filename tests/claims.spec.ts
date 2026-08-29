@@ -29,8 +29,8 @@ test('@claim:demo-conversion bundled demo writes Markdown and reports', async ()
 test('@claim:local-processing demo sends no document data away', async ({ page }) => {
   const seen: string[] = [];
   page.on('request', (request) => seen.push(request.url()));
-  await page.goto('/demo');
-  await expect(page.getByRole('heading', { level: 1 })).toContainText('Watch one DOCX');
+  await page.goto('/?demo=1');
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('See the sample DOCX');
   await expect(page.locator('#terminal-output')).toContainText('field-guide.fidelity.md');
   expect(seen.every((url) => new URL(url).origin === 'http://127.0.0.1:4173')).toBe(true);
   const root = await mkdtemp(join(tmpdir(), 'fidelity-offline-'));
@@ -38,19 +38,21 @@ test('@claim:local-processing demo sends no document data away', async ({ page }
   expect(JSON.parse(stdout).converted).toBe(1);
 });
 
-test('@claim:demo-isolation sample demo data is not saved and reset never touches real keys', async ({ page }) => {
-  await page.goto('/demo');
-  expect(await page.evaluate(() => Object.keys(localStorage).filter((key) => key.startsWith('demo:')))).toEqual([]);
+test('@claim:demo-isolation query demo uses isolated storage and reset never touches real keys', async ({ page }) => {
+  await page.goto('/?demo=1');
+  await expect(page).toHaveURL(/\/\?demo=1$/);
+  await expect(page.getByText('Demo — sample data, nothing is saved to your files')).toBeVisible();
+  expect(await page.evaluate(() => localStorage.getItem('demo:sample'))).toBe('field-guide');
   await page.evaluate(() => { localStorage.setItem('demo:check', 'sample'); localStorage.setItem('real:check', 'keep'); });
   await page.getByRole('button', { name: 'Reset demo' }).click();
-  expect(await page.evaluate(() => ({ demo: localStorage.getItem('demo:check'), real: localStorage.getItem('real:check') }))).toEqual({ demo: null, real: 'keep' });
+  expect(await page.evaluate(() => ({ demo: localStorage.getItem('demo:check'), real: localStorage.getItem('real:check'), sample: localStorage.getItem('demo:sample') }))).toEqual({ demo: null, real: 'keep', sample: 'field-guide' });
   await page.evaluate(() => localStorage.setItem('demo:check', 'sample'));
   await page.getByRole('link', { name: 'Start for real' }).click();
   await expect(page).toHaveURL(/\/$/);
-  expect(await page.evaluate(() => ({ demo: localStorage.getItem('demo:check'), real: localStorage.getItem('real:check') }))).toEqual({ demo: null, real: 'keep' });
+  expect(await page.evaluate(() => ({ demo: localStorage.getItem('demo:check'), real: localStorage.getItem('real:check'), sample: localStorage.getItem('demo:sample') }))).toEqual({ demo: null, real: 'keep', sample: null });
 });
 
-test('@claim:risk-ledger complex DOCX reports every promised category and location', async () => {
+test('@claim:fidelity-report complex DOCX reports every promised category and location', async () => {
   const root = await mkdtemp(join(tmpdir(), 'fidelity-ledger-'));
   const output = join(root, 'out');
   await exec('cargo', ['run', '--quiet', '--', 'convert', sample, '--output', output], { cwd: repo });
@@ -120,7 +122,7 @@ test('@claim:single-binary the release build produces one CLI binary', async () 
   const binary = join(repo, 'target', 'release', 'docx-fidelity');
   await access(binary);
   const { stdout } = await exec(binary, ['--version']);
-  expect(stdout).toContain('docx-fidelity 0.1.2');
+  expect(stdout).toContain('docx-fidelity 0.1.3');
 });
 
 test('@claim:rust-toolchain Rust 1.88 builds the locked package', async () => {
@@ -178,11 +180,11 @@ test('@regression:legacy-license-verify an existing token can still be checked d
   }
 });
 
-test('@regression:unregistered-checkout the site ships no unavailable purchase flow and immutable asset policy', async ({ page }) => {
+test('@regression:free-scope the site states the registered free CLI scope and keeps immutable asset policy', async ({ page }) => {
   const requests: string[] = [];
   page.on('request', (request) => requests.push(request.url()));
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: 'Stop CI on review risks' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Stop CI on review issues' })).toBeVisible();
   expect(await page.locator('a[href*="checkout"]').count()).toBe(0);
   expect(await page.content()).not.toContain('api.sociobot.in');
   expect(requests.every((url) => new URL(url).origin === 'http://127.0.0.1:4173')).toBe(true);
@@ -193,6 +195,27 @@ test('@regression:unregistered-checkout the site ships no unavailable purchase f
   const assets = await readdir(join(repo, 'dist', 'site', 'assets'));
   expect(assets.some((asset) => /^index-[\w-]+\.js$/.test(asset))).toBe(true);
   expect(assets.some((asset) => /^index-[\w-]+\.css$/.test(asset))).toBe(true);
+});
+
+test('@regression:review-copy uses one product name, plain section names, and fidelity report wording', async ({ page }) => {
+  await page.goto('/');
+  await expect(page).toHaveTitle('Docx Markdown Fidelity Report — review DOCX');
+  await expect(page.locator('.wordmark')).toContainText('Docx Markdown Fidelity Report');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Convert DOCX and list review issues.');
+  for (const heading of ['Review the sample fidelity report', 'How conversion works', 'Run the bundled CLI demo', 'What this CLI does not change']) {
+    await expect(page.getByRole('heading', { name: heading })).toBeVisible();
+  }
+  const landingText = await page.locator('main').innerText();
+  expect(landingText).toContain('fidelity report');
+  expect(landingText.toLowerCase()).not.toContain('risk ledger');
+  expect(landingText.toLowerCase()).not.toContain('fidelity ledger');
+  await page.goto('/?demo=1');
+  await expect(page).toHaveTitle('Demo — Docx Markdown Fidelity Report');
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', 'https://docx-markdown-fidelity-report.sociobot.in/demo');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('See the sample DOCX conversion report.');
+  await page.goto('/not-a-route');
+  await expect(page).toHaveTitle('Page not found — Docx Markdown Fidelity Report');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Page not found.');
 });
 
 test('@regression:param-factory-footer-link every route uses the certificate-valid factory URL', async ({ page }) => {
@@ -270,9 +293,9 @@ test('@claim:safe-input unsafe archive paths are rejected without extraction', a
   expect(tooManyStderr).toContain('too many archive entries');
 });
 
-test('@regression:demo-ledger browser demo matches all bundled sample findings', async ({ page }) => {
+test('@regression:demo-report browser demo matches all bundled sample findings', async ({ page }) => {
   await page.goto('/demo');
-  await expect(page.getByRole('heading', { name: 'The sample marks seven risk areas' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'The sample report lists seven issue categories' })).toBeVisible();
   const categories = await page.locator('.demo-result dt').allTextContents();
   const counts = (await page.locator('.demo-result dd').allTextContents()).map((value) => Number.parseInt(value, 10));
   expect(categories).toEqual(['Tables', 'Comments', 'Revisions', 'Embedded objects', 'Footnotes', 'Styles', 'Images']);
@@ -283,7 +306,7 @@ test('@regression:demo-ledger browser demo matches all bundled sample findings',
 test('@regression:real-404 unknown routes return HTTP 404 with the designed page', async ({ page }) => {
   const response = await page.goto('/not-a-route');
   expect(response?.status()).toBe(404);
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('This path is outside the survey.');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Page not found.');
   const config = JSON.parse(await readFile(join(repo, 'site', 'public', 'staticwebapp.config.json'), 'utf8'));
   expect(config.navigationFallback).toBeUndefined();
   expect(config.responseOverrides?.['404']?.rewrite).toBe('/404.html');
@@ -324,6 +347,11 @@ for (const route of ['/', '/demo', '/privacy', '/terms', '/not-a-route']) {
   });
 }
 
+test('@claim:mit-license the shipped source is MIT licensed', async () => {
+  await expect(readFile(join(repo, 'LICENSE'), 'utf8')).resolves.toContain('Permission is hereby granted');
+  await expect(readFile(join(repo, 'Cargo.toml'), 'utf8')).resolves.toContain('license = "MIT"');
+});
+
 test('@mobile first screen and demo keyboard path work at 390px', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
@@ -331,8 +359,8 @@ test('@mobile first screen and demo keyboard path work at 390px', async ({ page 
   expect(results.violations.filter((item) => ['serious', 'critical'].includes(item.impact || ''))).toEqual([]);
   await page.getByRole('link', { name: 'Try it with sample data' }).focus();
   await page.keyboard.press('Enter');
-  await expect(page).toHaveURL(/\/demo$/);
+  await expect(page).toHaveURL(/\/\?demo=1$/);
   await expect(page.locator('h1')).toBeFocused();
-  await expect(page.getByText('Demo — sample data, nothing is saved')).toBeVisible();
+  await expect(page.getByText('Demo — sample data, nothing is saved to your files')).toBeVisible();
   expect((await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth))).toBe(true);
 });

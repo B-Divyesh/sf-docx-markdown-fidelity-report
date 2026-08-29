@@ -11,13 +11,13 @@
     "claim": "Document conversion runs locally and sends no document data over the network.",
     "where": "landing facts, privacy, README",
     "test": "npm test -- --grep @claim:local-processing",
-    "sandbox": "fresh browser context on /demo; intercept requests and assert only same-origin site assets load"
+    "sandbox": "fresh browser context on /?demo=1; intercept requests and assert only same-origin site assets load"
   },
   {
-    "id": "risk-ledger",
-    "claim": "Reports list tables, comments, revisions, embedded objects, footnotes, styles, and image outcomes with source locations.",
-    "where": "landing preview, README",
-    "test": "npm test -- --grep @claim:risk-ledger",
+    "id": "fidelity-report",
+    "claim": "Fidelity reports list tables, comments, revisions, embedded objects, footnotes, styles, and image outcomes with source locations.",
+    "where": "landing preview, demo, README",
+    "test": "npm test -- --grep @claim:fidelity-report",
     "sandbox": "bundled complex DOCX fixture; assert every construct category and source location in JSON report"
   },
   {
@@ -50,7 +50,7 @@
   },
   {
     "id": "demo-isolation",
-    "claim": "Demo sample data is not saved; Reset demo and Start for real clear only demo state.",
+    "claim": "The sample demo uses separate demo storage; Reset demo and Start for real clear only demo state.",
     "where": "demo banner, privacy, README, .factory/demo.md",
     "test": "npm test -- --grep @claim:demo-isolation",
     "sandbox": "fresh browser demo context; seed demo: and real: keys, activate Reset demo and Start for real, and assert only demo: keys are removed"
@@ -82,5 +82,12 @@
     "where": "landing boundaries, README, terms",
     "test": "npm test -- --grep @claim:scope-boundaries",
     "sandbox": "convert a copied bundled DOCX, byte-compare the source before and after, and assert CLI help has no OCR, edit, or PDF command"
+  },
+  {
+    "id": "mit-license",
+    "claim": "The source code is MIT licensed.",
+    "where": "README, terms",
+    "test": "npm test -- --grep @claim:mit-license",
+    "sandbox": "fresh checkout; assert the shipped LICENSE contains the MIT grant and Cargo metadata declares MIT"
   }
 ]

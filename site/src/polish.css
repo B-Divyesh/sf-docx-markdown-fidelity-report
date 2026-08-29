@@ -1,0 +1,2 @@
+/* Repair rules kept separate so the cartographic base system remains readable. */
+.demo-intro h1 { overflow-wrap: anywhere; }

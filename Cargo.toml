@@ -1,9 +1,9 @@
 [package]
 name = "docx-markdown-fidelity-report"
-version = "0.1.2"
+version = "0.1.3"
 edition = "2021"
 rust-version = "1.88"
-description = "Convert DOCX to Markdown and emit a source-located fidelity report"
+description = "Convert DOCX to Markdown and emit a fidelity report with source locations"
 license = "MIT"
 repository = "https://github.com/B-Divyesh/sf-docx-markdown-fidelity-report"
 readme = "README.md"

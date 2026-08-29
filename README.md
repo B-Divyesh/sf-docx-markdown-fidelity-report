@@ -2,7 +2,7 @@
 
 Convert DOCX to Markdown and list every item that needs review.
 
-This local CLI is for teams moving Word-heavy documentation. It creates readable Markdown, extracts images, and writes a source-located fidelity ledger beside each result. It never executes macros or embedded objects.
+This local CLI is for teams moving Word-heavy documentation. It creates Markdown, extracts images, and writes a fidelity report beside each result. The report names the file part and paragraph to check. It never executes macros or embedded objects.
 
 ## Try the bundled sample
 
@@ -20,8 +20,6 @@ Build the single binary with stable Rust 1.88 or newer:
 cargo install --path .
 docx-fidelity --help
 ```
-
-No account or conversion service is required.
 
 ## Usage
 
@@ -50,7 +48,7 @@ Each input produces:
 - `<name>.fidelity.md`: a review checklist for people.
 - `<name>.media/`: safely named extracted images, when the DOCX contains images.
 
-The report covers tables, comments, tracked revisions, embedded objects, footnotes, non-default styles, and every image extraction outcome. Unknown or lossy constructs stay visible as findings. Plain Word text that looks like Markdown stays literal in the output.
+The fidelity report covers tables, comments, tracked revisions, embedded objects, footnotes, non-default styles, and every image extraction outcome. Unknown or lossy constructs stay visible as findings. Plain Word text that looks like Markdown stays literal in the output.
 
 ## Exit codes
 
@@ -60,13 +58,11 @@ The report covers tables, comments, tracked revisions, embedded objects, footnot
 
 ## CI policy gates
 
-All conversion, reports, and CI policy gates run locally. Use `--fail-on warning|error` to make CI stop at the selected risk level.
+All conversion, fidelity reports, and CI policy checks run locally. Use `--fail-on warning|error` to make CI stop at the selected risk level.
 
 ```sh
 docx-fidelity convert docs/ --output out/ --fail-on error
 ```
-
-The command does not require an account or network connection.
 
 ## Scope and safety
 
@@ -83,6 +79,10 @@ cargo +1.88.0 test --locked
 ```
 
 `npm test` runs Rust unit and integration tests plus browser claim tests. `npm run build` produces the release binary and the static site at `dist/site/`. `npm run package` creates the publishable crate without sending it to a registry.
+
+## Deploy
+
+The factory deploys the static site from `dist/site/`. Build it with `npm run build` before the factory deployment step.
 
 ## Repository map
 

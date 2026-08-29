@@ -1,4 +1,4 @@
-//! DOCX-to-Markdown conversion with a source-located fidelity ledger.
+//! DOCX-to-Markdown conversion with a fidelity report and source locations.
 //!
 //! The small public API mirrors the CLI:
 //!
