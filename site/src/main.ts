@@ -1,12 +1,5 @@
 import './style.css';
 
-const PRODUCT = 'Docx Fidelity';
-const SLUG = 'docx-markdown-fidelity-report';
-const API = `https://api.sociobot.in/api/v1/products/${SLUG}`;
-const LICENSE_KEY = `sb_license:${SLUG}`;
-const VERDICT_KEY = `sb_license_verdict:${SLUG}`;
-const DAY = 86_400_000;
-
 type Route = { title: string; description: string; render: () => string };
 
 const header = () => `
@@ -41,7 +34,7 @@ const home = () => `
         <ul class="plain-facts" aria-label="Product facts">
           <li><span aria-hidden="true">01</span> Runs on your computer.</li>
           <li><span aria-hidden="true">02</span> Document data stays local.</li>
-          <li><span aria-hidden="true">03</span> Free conversion. $29 CI checks.</li>
+          <li><span aria-hidden="true">03</span> CI policy gates are included.</li>
         </ul>
       </div>
       <figure class="hero-map">
@@ -52,7 +45,7 @@ const home = () => `
 
     <section class="ledger-section" aria-labelledby="ledger-heading">
       <div class="section-heading"><p class="eyebrow">Sample report · North Ridge guide</p><h2 id="ledger-heading">See the handoff before you publish</h2><p>The converter keeps useful Markdown and names each place that lost meaning.</p></div>
-      <div class="ledger-wrap">
+      <div class="ledger-wrap" tabindex="0" aria-label="Scroll the sample fidelity findings table horizontally.">
         <div class="status-strip"><span class="status blocked">● Blocked</span><span>9 findings</span><span>word/document.xml</span></div>
         <table>
           <caption class="sr-only">Sample fidelity findings by source location</caption>
@@ -93,15 +86,10 @@ Sandbox: /tmp/docx-fidelity-demo-…</code></pre>
       <p>The CLI reads bounded ZIP and XML parts. Embedded files are reported, never opened.</p>
     </section>
 
-    <section class="paid" aria-labelledby="paid-heading">
-      <div class="price-mark"><span>$29</span><small>one time</small></div>
-      <div><p class="eyebrow">Team license</p><h2 id="paid-heading">Make CI stop on review risks</h2><p>Conversion and every report stay free. The license adds <code>--fail-on warning|error</code> for migration checks in CI.</p><p class="legal-note">Sociobot/Dodo is the merchant of record. Refunds revoke the license.</p></div>
-      <div class="license-actions">
-        <a class="button primary" href="${API}/checkout">Buy the team license</a>
-        <button class="button secondary" id="restore-toggle" aria-expanded="false" aria-controls="restore-form">Have a license?</button>
-        <form id="restore-form" class="restore-form" hidden><label for="license-token">License token</label><div><input id="license-token" name="license" autocomplete="off" required /><button type="submit">Verify license</button></div><p id="license-message" aria-live="polite"></p></form>
-        <p id="license-status" class="license-status" aria-live="polite"></p>
-      </div>
+    <section class="paid" aria-labelledby="policy-heading">
+      <div class="price-mark"><span>CI</span><small>included</small></div>
+      <div><p class="eyebrow">Policy gates</p><h2 id="policy-heading">Stop CI on review risks</h2><p>Use <code>--fail-on warning|error</code> to fail a migration check at the risk level your team chooses.</p><p class="legal-note">Policy gates run locally with the conversion. No account or network connection is needed.</p></div>
+      <div class="policy-actions"><a class="button primary" href="/#install">Install the CLI</a><code>docx-fidelity convert docs/ --output out/ --fail-on warning</code></div>
     </section>
   </main>
   ${footer()}`;
@@ -124,10 +112,10 @@ const demo = () => `
   ${footer()}`;
 
 const privacy = () => `
-  ${header()}<main id="main" tabindex="-1" class="prose-page"><p class="eyebrow">Policy · effective 28 August 2026</p><h1>Your documents stay on your computer.</h1><p>The CLI reads and writes local files. It has no telemetry and does not send document names or contents anywhere.</p><h2>License checks</h2><p>If you use a team license, the CLI sends only the token to Sociobot. The site stores that token and a dated verdict in your browser. You can remove both by clearing site storage.</p><h2>Demo data</h2><p>The browser demo loads only bundled sample files from this site. Demo state uses keys starting with <code>demo:</code>. Resetting or leaving the demo clears those keys.</p><h2>Site requests</h2><p>The static site loads fonts and art from its own origin. It has no analytics, advertising, or third-party scripts.</p><h2>Contact</h2><p>Email <a href="mailto:privacy@sociobot.in">privacy@sociobot.in</a> with a privacy question.</p></main>${footer()}`;
+  ${header()}<main id="main" tabindex="-1" class="prose-page"><p class="eyebrow">Policy · effective 29 August 2026</p><h1>Your documents stay on your computer.</h1><p>The CLI reads and writes local files. It has no telemetry and does not send document names or contents anywhere.</p><h2>Policy gates</h2><p>The <code>--fail-on</code> option runs locally. It does not require an account or send a token.</p><h2>Demo data</h2><p>The browser demo loads only bundled sample files from this site. Demo state uses keys starting with <code>demo:</code>. Resetting or leaving the demo clears those keys.</p><h2>Site requests</h2><p>The static site loads fonts and art from its own origin. It has no analytics, advertising, or third-party scripts.</p><h2>Contact</h2><p>Email <a href="mailto:privacy@sociobot.in">privacy@sociobot.in</a> with a privacy question.</p></main>${footer()}`;
 
 const terms = () => `
-  ${header()}<main id="main" tabindex="-1" class="prose-page"><p class="eyebrow">Terms · effective 28 August 2026</p><h1>Use the report as a review aid.</h1><p>The software is provided under the MIT License. You remain responsible for checking converted Markdown before publishing it.</p><h2>Team license</h2><p>The $29 team license is a one-time purchase. It adds CI policy gates to the free conversion and report features. Sociobot/Dodo is the merchant of record and handles payment and refunds.</p><h2>Safe use</h2><p>Do not treat a clear report as proof that two formats render identically. Keep backups of source files. Do not use the tool to inspect documents you lack permission to access.</p><h2>Limits</h2><p>The tool does not perform OCR, edit documents, or open embedded objects. The MIT License contains the full warranty limits.</p><h2>Contact</h2><p>Email <a href="mailto:support@sociobot.in">support@sociobot.in</a> with a terms question.</p></main>${footer()}`;
+  ${header()}<main id="main" tabindex="-1" class="prose-page"><p class="eyebrow">Terms · effective 29 August 2026</p><h1>Use the report as a review aid.</h1><p>The software is provided under the MIT License. You remain responsible for checking converted Markdown before publishing it.</p><h2>Policy gates</h2><p>CI policy gates are included with the CLI. They run on your computer and do not require an account.</p><h2>Safe use</h2><p>Do not treat a clear report as proof that two formats render identically. Keep backups of source files. Do not use the tool to inspect documents you lack permission to access.</p><h2>Limits</h2><p>The tool does not perform OCR, edit documents, or open embedded objects. The MIT License contains the full warranty limits.</p><h2>Contact</h2><p>Email <a href="mailto:support@sociobot.in">support@sociobot.in</a> with a terms question.</p></main>${footer()}`;
 
 const notFound = () => `
   ${header()}<main id="main" tabindex="-1" class="not-found">${contour}<p class="eyebrow">Map reference 404</p><h1>This path is outside the survey.</h1><p>The page moved or never existed. Return to the main report map.</p><a class="button primary" href="/" data-link>Return home</a></main>${footer()}`;
@@ -135,8 +123,8 @@ const notFound = () => `
 const routes: Record<string, Route> = {
   '/': { title: 'Docx Fidelity — convert DOCX and map review risks', description: 'Convert DOCX to Markdown locally and get a source-located report of tables, comments, revisions, images, footnotes, and styles.', render: home },
   '/demo': { title: 'Demo — Docx Fidelity', description: 'Watch the bundled DOCX sample convert to Markdown and a source-located fidelity report.', render: demo },
-  '/privacy': { title: 'Privacy — Docx Fidelity', description: 'How Docx Fidelity processes documents locally and handles license tokens.', render: privacy },
-  '/terms': { title: 'Terms — Docx Fidelity', description: 'Terms for Docx Fidelity and its one-time team license.', render: terms },
+  '/privacy': { title: 'Privacy — Docx Fidelity', description: 'How Docx Fidelity processes documents locally without uploads or tracking.', render: privacy },
+  '/terms': { title: 'Terms — Docx Fidelity', description: 'Terms for the local Docx Fidelity command-line tool.', render: terms },
 };
 
 function renderRoute(focus = false) {
@@ -174,15 +162,6 @@ function wireInteractions(path: string) {
     button.textContent = 'Commands copied';
     setTimeout(() => button.textContent = 'Copy commands', 1800);
   }));
-  const toggle = document.querySelector<HTMLButtonElement>('#restore-toggle');
-  toggle?.addEventListener('click', () => {
-    const form = document.querySelector<HTMLFormElement>('#restore-form')!;
-    const opening = form.hidden; form.hidden = !opening; toggle.setAttribute('aria-expanded', String(opening));
-    if (opening) document.querySelector<HTMLInputElement>('#license-token')?.focus();
-  });
-  document.querySelector<HTMLFormElement>('#restore-form')?.addEventListener('submit', async (event) => {
-    event.preventDefault(); const input = document.querySelector<HTMLInputElement>('#license-token')!; await saveAndVerifyLicense(input.value);
-  });
   if (path === '/demo') wireDemo();
 }
 
@@ -217,39 +196,10 @@ function wireDemo() {
   play();
 }
 
-async function saveAndVerifyLicense(token: string) {
-  const message = document.querySelector<HTMLElement>('#license-message');
-  const status = document.querySelector<HTMLElement>('#license-status');
-  if (!token.trim()) { if (message) message.textContent = 'Paste a license token, then try again.'; return; }
-  localStorage.setItem(LICENSE_KEY, token.trim());
-  if (message) message.textContent = 'Checking this license…';
-  try {
-    const response = await fetch(`${API}/verify?license=${encodeURIComponent(token.trim())}`);
-    const verdict = await response.json() as { valid: boolean; reason: string };
-    localStorage.setItem(VERDICT_KEY, JSON.stringify({ ...verdict, checkedAt: Date.now() }));
-    const result = verdict.valid ? 'License active. CI policy gates are ready.' : `License no longer active: ${verdict.reason}.`;
-    if (message) message.textContent = result;
-    if (status) status.textContent = result;
-  } catch {
-    if (message) message.textContent = 'The license check could not connect. Your free conversion still works.';
-    if (status) status.textContent = 'License check unavailable. Free conversion still works.';
-  }
-}
-
-async function handleReturnedLicense() {
-  const url = new URL(location.href); const token = url.searchParams.get('license');
-  if (token) { localStorage.setItem(LICENSE_KEY, token); url.searchParams.delete('license'); history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`); await saveAndVerifyLicense(token); return; }
-  const stored = localStorage.getItem(LICENSE_KEY); const cached = localStorage.getItem(VERDICT_KEY);
-  if (!stored) return;
-  try { const verdict = cached ? JSON.parse(cached) as { valid: boolean; checkedAt: number } : null; if (verdict?.valid && Date.now() - verdict.checkedAt < DAY) return; } catch { /* verify below */ }
-  await saveAndVerifyLicense(stored);
-}
-
 document.addEventListener('click', (event) => {
   const link = (event.target as Element).closest<HTMLAnchorElement>('a[href^="/#"]');
   if (link && location.pathname !== '/') { event.preventDefault(); history.pushState({}, '', link.pathname + link.hash); renderRoute(true); requestAnimationFrame(() => document.querySelector(link.hash)?.scrollIntoView()); }
 });
 window.addEventListener('popstate', () => renderRoute(true));
 renderRoute();
-handleReturnedLicense();
 if ('serviceWorker' in navigator && location.hostname !== 'localhost') navigator.serviceWorker.register('/sw.js').catch(() => undefined);

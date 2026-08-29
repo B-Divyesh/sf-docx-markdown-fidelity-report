@@ -7,6 +7,8 @@
     "dev": "vite --config site/vite.config.ts",
     "test:rust": "cargo test",
     "test": "npm run test:rust && npm run build:site && playwright test",
+    "typecheck": "tsc --noEmit --project site/tsconfig.json",
+    "lint": "cargo fmt --check && cargo clippy --all-targets -- -D warnings && npm run typecheck",
     "build:cli": "cargo build --release && mkdir -p dist/bin && cp target/release/docx-fidelity dist/bin/",
     "build:site": "vite build --config site/vite.config.ts",
     "build": "npm run build:cli && npm run build:site",
@@ -15,6 +17,7 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "4.10.2",
+    "@types/node": "22.20.0",
     "@playwright/test": "1.58.2",
     "typescript": "5.9.2",
     "vite": "7.3.6"

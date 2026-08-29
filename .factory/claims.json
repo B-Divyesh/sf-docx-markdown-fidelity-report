@@ -28,11 +28,11 @@
     "sandbox": "fresh directory with two DOCX fixtures; assert two Markdown files and two reports"
   },
   {
-    "id": "paid-policy",
-    "claim": "A team license adds CI policy gates for selected risk levels.",
-    "where": "landing paid tier, README",
-    "test": "npm test -- --grep @claim:paid-policy",
-    "sandbox": "fixture license verifier; assert valid token enables --fail-on and invalid token does not"
+    "id": "ci-policy",
+    "claim": "CI policy gates stop a conversion at selected risk levels without a network connection.",
+    "where": "landing policy gates, README",
+    "test": "npm test -- --grep @claim:ci-policy",
+    "sandbox": "bundled complex DOCX with blocked findings; assert --fail-on exits 3 while HTTP proxies are unreachable"
   },
   {
     "id": "safe-input",

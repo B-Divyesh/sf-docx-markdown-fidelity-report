@@ -8,9 +8,9 @@ use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+const DEMO_DOCX: &[u8] = include_bytes!("../examples/field-guide.docx");
 const VERIFY_URL: &str =
     "https://api.sociobot.in/api/v1/products/docx-markdown-fidelity-report/verify";
-const DEMO_DOCX: &[u8] = include_bytes!("../examples/field-guide.docx");
 
 #[derive(Parser)]
 #[command(name = "docx-fidelity", version, about = "Convert DOCX to Markdown and map every fidelity risk", long_about = None)]
@@ -34,16 +34,13 @@ enum Command {
         /// Replace existing output files.
         #[arg(long)]
         overwrite: bool,
-        /// Exit 3 when a finding meets this level. Requires a team license.
+        /// Exit 3 when a finding meets this level. Runs locally.
         #[arg(long, value_enum)]
         fail_on: Option<FailOn>,
-        /// Team license token. DOCX_FIDELITY_LICENSE is safer in shell history.
-        #[arg(long, hide = true)]
-        license: Option<String>,
     },
     /// Convert the bundled complex sample in a fresh temporary directory.
     Demo,
-    /// Check a team license token.
+    /// Check an existing license token without sending document data.
     License {
         #[command(subcommand)]
         command: LicenseCommand,
@@ -52,7 +49,7 @@ enum Command {
 
 #[derive(Subcommand)]
 enum LicenseCommand {
-    /// Verify a token with Sociobot. No document data is sent.
+    /// Verify a token with Sociobot.
     Verify { token: String },
 }
 
@@ -103,27 +100,7 @@ fn run() -> Result<u8> {
             output,
             overwrite,
             fail_on,
-            license,
         } => {
-            if fail_on.is_some() {
-                let token = license
-                    .or_else(|| env::var("DOCX_FIDELITY_LICENSE").ok())
-                    .context("--fail-on needs a team license; set DOCX_FIDELITY_LICENSE")?;
-                let verdict = match verify_license(&token) {
-                    Ok(verdict) => verdict,
-                    Err(error) => {
-                        eprintln!("License could not be checked: {error:#}");
-                        return Ok(4);
-                    }
-                };
-                if !verdict.valid {
-                    eprintln!(
-                        "License is not active: {}. Conversion did not start.",
-                        verdict.reason
-                    );
-                    return Ok(4);
-                }
-            }
             let results = convert_all(&input, &output, overwrite)?;
             print_results(&results, cli.json)?;
             if let Some(level) = fail_on {

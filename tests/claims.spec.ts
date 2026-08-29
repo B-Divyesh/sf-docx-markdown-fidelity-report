@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { mkdtemp, mkdir, copyFile, readFile, access } from 'node:fs/promises';
+import { mkdtemp, mkdir, copyFile, readFile, access, readdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { spawn } from 'node:child_process';
@@ -56,26 +56,70 @@ test('@claim:batch-conversion a directory creates one result per DOCX', async ()
   await access(join(output, 'guide-one.md')); await access(join(output, 'guide-two.fidelity.json'));
 });
 
-test('@claim:paid-policy valid license enables CI threshold and invalid license stays locked', async ({ page }) => {
-  await page.route('https://api.sociobot.in/api/v1/products/docx-markdown-fidelity-report/verify?*', (route) => route.fulfill({ json: { valid: true, reason: 'ok', expires_at: null } }));
-  await page.goto('/?license=browser-token');
-  await expect(page).toHaveURL('http://127.0.0.1:4173/');
-  await expect.poll(() => page.evaluate(() => localStorage.getItem('sb_license:docx-markdown-fidelity-report'))).toBe('browser-token');
-  await expect(page.locator('#license-status')).toContainText('License active');
-  await expect(page.getByRole('link', { name: 'Buy the team license' })).toHaveAttribute('href', 'https://api.sociobot.in/api/v1/products/docx-markdown-fidelity-report/checkout');
+test('@claim:ci-policy policy gates work locally with the network unavailable', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'fidelity-policy-'));
+  let code = 0;
+  try {
+    await exec('cargo', ['run', '--quiet', '--', 'convert', sample, '--output', join(root, 'out'), '--fail-on', 'error'], {
+      cwd: repo,
+      env: { ...process.env, HTTP_PROXY: 'http://127.0.0.1:1', HTTPS_PROXY: 'http://127.0.0.1:1', NO_PROXY: '' },
+    });
+  } catch (error) { code = Number((error as { code: number }).code); }
+  expect(code).toBe(3);
+});
+
+test('@regression:legacy-license-verify an existing token can still be checked directly', async () => {
   const server = spawn(process.execPath, [join(repo, 'tests', 'license-server.mjs')], { cwd: repo, env: { ...process.env, PORT: '43999' }, stdio: ['ignore', 'pipe', 'inherit'] });
   await new Promise<void>((resolveReady, reject) => { server.stdout.once('data', () => resolveReady()); server.once('error', reject); });
-  const run = async (token: string, output: string) => {
-    try {
-      await exec('cargo', ['run', '--quiet', '--', 'convert', sample, '--output', output, '--fail-on', 'error', '--license', token], { cwd: repo, env: { ...process.env, DOCX_FIDELITY_VERIFY_URL: 'http://127.0.0.1:43999/verify' } });
-      return 0;
-    } catch (error) { return Number((error as { code: number }).code); }
-  };
-  const root = await mkdtemp(join(tmpdir(), 'fidelity-license-'));
   try {
-    expect(await run('valid-token', join(root, 'valid'))).toBe(3);
-    expect(await run('invalid-token', join(root, 'invalid'))).toBe(4);
-  } finally { server.kill(); }
+    const valid = await exec('cargo', ['run', '--quiet', '--', '--json', 'license', 'verify', 'valid-token'], { cwd: repo, env: { ...process.env, DOCX_FIDELITY_VERIFY_URL: 'http://127.0.0.1:43999/verify' } });
+    expect(JSON.parse(valid.stdout)).toMatchObject({ valid: true, reason: 'ok' });
+    await expect(exec('cargo', ['run', '--quiet', '--', 'license', 'verify', 'invalid-token'], { cwd: repo, env: { ...process.env, DOCX_FIDELITY_VERIFY_URL: 'http://127.0.0.1:43999/verify' } })).rejects.toMatchObject({ code: 4 });
+  } finally {
+    server.kill();
+  }
+});
+
+test('@regression:unregistered-checkout the site ships no unavailable purchase flow and immutable asset policy', async ({ page }) => {
+  const requests: string[] = [];
+  page.on('request', (request) => requests.push(request.url()));
+  await page.goto('/');
+  await expect(page.getByRole('heading', { name: 'Stop CI on review risks' })).toBeVisible();
+  expect(await page.locator('a[href*="checkout"]').count()).toBe(0);
+  expect(await page.content()).not.toContain('api.sociobot.in');
+  expect(requests.every((url) => new URL(url).origin === 'http://127.0.0.1:4173')).toBe(true);
+
+  const config = JSON.parse(await readFile(join(repo, 'site', 'public', 'staticwebapp.config.json'), 'utf8')) as { routes: Array<{ route: string; headers?: Record<string, string> }> };
+  const assetRoute = config.routes.find((route) => route.route === '/assets/*');
+  expect(assetRoute?.headers?.['Cache-Control']).toBe('public, max-age=31536000, immutable');
+  const assets = await readdir(join(repo, 'dist', 'site', 'assets'));
+  expect(assets.some((asset) => /^index-[\w-]+\.js$/.test(asset))).toBe(true);
+  expect(assets.some((asset) => /^index-[\w-]+\.css$/.test(asset))).toBe(true);
+});
+
+test('@offline-update the service worker reloads the shell without reachable network and uses the network for later navigations', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForFunction(() => navigator.serviceWorker.ready.then(() => true));
+  await page.reload();
+  await page.waitForFunction(() => Boolean(navigator.serviceWorker.controller));
+  await expect.poll(() => page.evaluate(async () => {
+    const script = document.querySelector<HTMLScriptElement>('script[type="module"]')?.src;
+    const cacheNames = await caches.keys();
+    return Boolean(script) && (await Promise.all(cacheNames.map(async (name) => (await caches.open(name)).match(script!)))).some(Boolean);
+  })).toBe(true);
+  await page.route('**/*', (route) => route.abort());
+  try {
+    await page.reload();
+    await expect(page.getByRole('heading', { level: 1 })).toContainText('Convert DOCX');
+  } finally {
+    await page.unrouteAll({ behavior: 'ignoreErrors' });
+  }
+  const worker = await readFile(join(repo, 'dist', 'site', 'sw.js'), 'utf8');
+  expect(worker).toContain("event.request.mode === 'navigate'");
+  expect(worker).toContain('fetch(event.request).then');
+  expect(worker).not.toContain('__PRECACHE_ASSETS__');
+  expect(worker).not.toContain('__BUILD_ID__');
+  expect(worker).not.toContain('undefined');
 });
 
 test('@claim:safe-input unsafe archive paths are rejected without extraction', async () => {
@@ -105,6 +149,8 @@ for (const route of ['/', '/demo', '/privacy', '/terms', '/not-a-route']) {
 test('@mobile first screen and demo keyboard path work at 390px', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  const results = await new AxeBuilder({ page }).analyze();
+  expect(results.violations.filter((item) => ['serious', 'critical'].includes(item.impact || ''))).toEqual([]);
   await page.getByRole('link', { name: 'Try it with sample data' }).focus();
   await page.keyboard.press('Enter');
   await expect(page).toHaveURL(/\/demo$/);

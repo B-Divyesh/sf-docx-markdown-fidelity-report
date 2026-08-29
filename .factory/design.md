@@ -31,7 +31,7 @@ The signature motion is a one-time contour draw across the hero when it enters. 
 
 ## Responsive intent
 
-At 390 px, the terminal moves below the headline, facts become a vertical legend, and map coordinate ornaments disappear. Core copy, demo action, command, and pricing remain. Tap targets stay at least 44 px.
+At 390 px, the terminal moves below the headline, facts become a vertical legend, and map coordinate ornaments disappear. Core copy, demo action, command, and CI policy gates remain. Tap targets stay at least 44 px.
 
 ## Original asset plan and provenance
 

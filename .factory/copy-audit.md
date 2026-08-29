@@ -1,6 +1,6 @@
 # Landing page copy audit
 
-Audited 2026-08-28. Counts treat hyphenated commands and prices as one word. Fragments, labels, navigation, table cells, and buttons are included because visitors hear them as interface copy.
+Audited 2026-08-29. Counts treat hyphenated commands as one word. Fragments, labels, navigation, table cells, and buttons are included because visitors hear them as interface copy.
 
 | Copy | Words | Result |
 | --- | ---: | --- |
@@ -17,7 +17,7 @@ Audited 2026-08-28. Counts treat hyphenated commands and prices as one word. Fra
 | Runs on your computer. | 4 | Pass |
 | Document data stays local. | 4 | Pass |
 | Free conversion. | 2 | Pass |
-| $29 CI checks. | 3 | Pass |
+| CI policy gates are included. | 5 | Pass |
 | Every pin becomes a source-located finding. | 7 | Pass |
 | Sample report · North Ridge guide | 5 | Pass |
 | See the handoff before you publish | 7 | Pass |
@@ -60,25 +60,12 @@ Audited 2026-08-28. Counts treat hyphenated commands and prices as one word. Fra
 | No document upload | 3 | Pass |
 | The CLI reads bounded ZIP and XML parts. | 8 | Pass |
 | Embedded files are reported, never opened. | 6 | Pass |
-| Team license | 2 | Pass |
-| Make CI stop on review risks | 6 | Pass |
-| Conversion and every report stay free. | 6 | Pass |
-| The license adds `--fail-on warning\|error` for migration checks in CI. | 9 | Pass |
-| Sociobot/Dodo is the merchant of record. | 6 | Pass |
-| Refunds revoke the license. | 4 | Pass |
-| Buy the team license | 4 | Pass |
-| Have a license? | 3 | Pass |
-| License token | 2 | Pass |
-| Verify license | 2 | Pass |
-| Paste a license token, then try again. | 7 | Pass |
-| Checking this license… | 3 | Pass |
-| License active. | 2 | Pass |
-| CI policy gates are ready. | 5 | Pass |
-| License no longer active: [reason]. | 5 | Pass |
-| The license check could not connect. | 6 | Pass |
-| Your free conversion still works. | 5 | Pass |
-| License check unavailable. | 3 | Pass |
-| Free conversion still works. | 4 | Pass |
+| Policy gates | 2 | Pass |
+| Stop CI on review risks | 5 | Pass |
+| Use `--fail-on warning\|error` to fail a migration check at the risk level your team chooses. | 15 | Pass |
+| Policy gates run locally with the conversion. | 7 | Pass |
+| No account or network connection is needed. | 7 | Pass |
+| Install the CLI | 3 | Pass |
 | Convert DOCX and map every review risk. | 7 | Pass |
 | Privacy | 1 | Pass |
 | Terms | 1 | Pass |
@@ -96,5 +83,5 @@ No sentence exceeds 22 words. No banned word appears. The first screen reads as 
 | One ledger entry | finding |
 | Human decision needed | review |
 | Bundled isolated try-out | demo |
-| Paid CI feature entitlement | team license |
+| Automated CI threshold | policy gate |
 | Original place in the DOCX | source location |

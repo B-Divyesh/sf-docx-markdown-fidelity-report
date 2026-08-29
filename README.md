@@ -56,21 +56,17 @@ The report covers tables, comments, tracked revisions, embedded objects, footnot
 
 - `0`: conversion completed. Findings may still need review.
 - `2`: bad arguments, unsafe input, or a read/write failure.
-- `3`: a licensed CI policy threshold was met.
-- `4`: the supplied team license is invalid or cannot be checked.
+- `3`: a CI policy threshold was met.
 
-## Team license
+## CI policy gates
 
-All conversion and report data stays free. A $29 one-time team license adds `--fail-on warning|error`, so CI can stop on a chosen risk level.
-
-Buy at <https://api.sociobot.in/api/v1/products/docx-markdown-fidelity-report/checkout>. The hosted checkout returns a license token. Sociobot/Dodo is the merchant of record and handles refunds.
+All conversion, reports, and CI policy gates run locally. Use `--fail-on warning|error` to make CI stop at the selected risk level.
 
 ```sh
-export DOCX_FIDELITY_LICENSE="your-token"
-docx-fidelity convert docs/ --output out/ --fail-on warning
+docx-fidelity convert docs/ --output out/ --fail-on error
 ```
 
-The CLI sends only the token to Sociobot for verification. It never sends document names or contents. You can also verify a token with `docx-fidelity license verify TOKEN`.
+The command does not require an account or network connection.
 
 ## Scope and safety
 
@@ -94,6 +90,6 @@ npm run package
 - `site/`: Vite landing, docs, demo, privacy, terms, and 404 routes.
 - `.factory/`: brief, design system, demo contract, claims, audits, and handoff.
 
-## Privacy and license
+## Privacy
 
 There is no telemetry. See the [privacy page](https://docx-markdown-fidelity-report.sociobot.in/privacy) and [terms](https://docx-markdown-fidelity-report.sociobot.in/terms). Source code is MIT licensed.
