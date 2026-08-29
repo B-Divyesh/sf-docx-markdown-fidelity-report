@@ -1,37 +1,36 @@
-# Handoff — repair 2
+# Handoff — independent verification 3
 
-## Release status: ready
+## Release status: FAIL
 
-- Repaired candidate: `5dd6ca2fc371e71be22c38a1092cec3a42a633a5`
-- Verifier report: `1df6164762ccf3391ecc3430748596eb0f7240e6`
-- Repair commit: `e3e8f72`
-- Deployed URL: https://docx-markdown-fidelity-report.sociobot.in
-- Azure deployment: `80da0fc6-cb76-4c58-9050-be5487b6a56e`
+- Tested candidate: `a6fa31f1d611c19ccaeb01a9a5a31182907f6a0b`
+- Tested live URL: https://docx-markdown-fidelity-report.sociobot.in
+- Verification date: 2026-08-29 UTC
+- Full report: `.factory/verification-3.md`
 
-The verifier's only release blocker is repaired. The footer now links to `https://sociobot.in/`, whose certificate covers the hostname, instead of `https://www.sociobot.in`, which fails TLS hostname validation.
+The deployment is healthy and byte-matches the candidate, but the product is not releasable. Independent tests found silent batch output loss from normalized filename collisions, malformed document XML accepted as a clear blank conversion, stale extracted media retained by `--overwrite`, and live controls below the required 44 px target size.
 
-## Regression coverage
+## Required repairs
 
-`@regression:param-factory-footer-link` opens `/`, `/demo`, `/privacy`, `/terms`, and the 404 route. It asserts that every **Built by Param Factory** link is visible, keeps its external-link semantics, and uses the exact certificate-valid URL. The post-deploy crawler followed every distinct HTTP link with normal TLS validation; all returned HTTP 200, including `https://sociobot.in/`.
+1. Detect/disambiguate normalized output-name collisions before a batch writes files. With `--overwrite`, two inputs must never share one output path.
+2. Reject truncated or structurally incomplete `word/document.xml`; do not emit `Clear` for malformed input.
+3. Replace or safely clear the exact prior media directory during `--overwrite` so the ledger and deliverable agree.
+4. Make all links and buttons at least 44×44 CSS px, including the wordmark, demo-banner actions, and footer links.
+5. Correct `/demo`: the bundled sample has seven categories and nine findings, including styles; current visible category rows sum to eight.
+6. Return a real HTTP 404 for unknown routes and add regression tests for every issue above.
 
-## Verification evidence
+## What passed
 
-- Clean install: `npm ci` completed with 24 packages and 0 vulnerabilities.
-- Full suite: `npm test` passed 17 tests, including Rust unit tests, the doctest, all claim tests, route axe checks, keyboard/mobile coverage, and service-worker offline reload.
-- Every `.factory/claims.json` command was also run separately. All six passed: `demo-conversion`, `local-processing`, `risk-ledger`, `batch-conversion`, `ci-policy`, and `safe-input`.
-- Static checks: `npm run lint` passed `cargo fmt --check`, Clippy with warnings denied, and TypeScript typechecking.
-- Production artifacts: `npm run build` produced `dist/bin/docx-fidelity` and `dist/site`; JS is 14.46 KB raw / 5.28 KB gzip and CSS is 12.40 KB raw / 3.62 KB gzip.
-- Package: `npm run package` produced an 83.7 KiB crate (25.6 KiB compressed). A fresh consumer installed it from the crate, ran `--help` and `--json demo`, converted one sample with nine findings, then converted a two-file batch with every promised ledger category.
-- Browser: the factory `verify-url.sh` passed with no console errors. `/`, `/demo`, `/privacy`, `/terms`, and an unknown route each returned 200 on desktop and 390×844 mobile, with one `h1`, one `main`, route-specific titles, no horizontal overflow, and zero serious or critical axe findings.
-- Keyboard and motion: Tab exposed the skip link; Enter focused `#main`; Enter on the demo action opened `/demo` and focused its heading. Reduced-motion animation and transition durations are `0.00001s`.
-- Privacy: the complete `/demo` request log contained only `https://docx-markdown-fidelity-report.sociobot.in`. No analytics, third-party script, or document upload occurred.
-- Offline/update: the deployed service worker activated cache `docx-fidelity-shell-index-C1ZRaeIZ.js`; a network-disabled reload rendered the landing heading.
-- Headers and caching: HTML and `sw.js` use `public, must-revalidate, max-age=30`; the hashed JS uses `public, max-age=31536000, immutable`. CSP, HSTS, `nosniff`, Referrer-Policy, and Permissions-Policy are present.
-- Live identity: 14 deployed files matched `dist/site` byte-for-byte. SHA-256: HTML `e1595ec528f129b6b5075b49d1a55acfdd7678f6834dd921fa5d60ea395ff24a`; JS `c87315d770e22235e48fe7a7f2ad2ac129fb917c6fa71f70744aa9dcf5997b32`; CSS `8f73fd99ed10dfbf13d4304d66fb7a704496567487ba3ca1e5e060f11644da63`.
-- Response policy: the retained license verifier returned 200 for 30 invalid synthetic tokens, then 429 with `Retry-After: 3` on request 31.
-- Lighthouse 13.4.1 mobile: performance 99, accessibility 100, best practices 100, SEO 100; LCP 1.96 s, CLS 0.0011, total blocking time 0 ms.
+- All six exact `.factory/claims.json` commands passed in isolated runs.
+- `npm ci`, `npm test` (17 Playwright tests plus Rust tests/doctest), `npm run lint`, `npm run build`, and `npm run package` passed.
+- The packaged crate installed in a clean consumer; its CLI and Rust API worked for normal, Unicode, batch, invalid, overwrite-recovery, size-boundary, macro, and policy-gate cases outside the failed boundaries.
+- All 14 served candidate assets matched the fresh production build byte-for-byte.
+- Cold first-read and one-click demo gates passed.
+- Desktop and 390 px routes had correct semantics, no console/page errors, no normal-size overflow, and zero axe serious/critical findings.
+- Privacy request logs were same-origin only. Security headers, immutable hashed-asset caching, service-worker offline reload, and all links passed.
+- The Sociobot verify API enforced an observed allowance of 30 requests; request 31 returned 429 with `Retry-After: 3`.
+- Lighthouse mobile: performance 96, accessibility 100, best practices 100, SEO 100; LCP 2.03 s and CLS 0.0011.
 
-## Run and verify
+## Run the verified gates
 
 ```sh
 npm ci
@@ -42,8 +41,4 @@ npm run package
 cargo run -- demo
 ```
 
-Deployment uses the work-order command `npm ci && npm run build:site`, output directory `dist/site`, and `/opt/fleet/lib/deploy-static.sh docx-markdown-fidelity-report dist/site`.
-
-## Known gaps and scope boundaries
-
-No release blocker remains. The product intentionally does not do OCR, document editing, PDF round-tripping, macro execution, embedded-object extraction, or hosted document conversion. Registry publishing remains a factory-owner step; this repair only produced and consumer-tested the package.
+Do not release until the P1 findings in `.factory/verification-3.md` are repaired and independently retested. No product code was changed during this verification.
