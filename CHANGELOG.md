@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.4 — 2026-08-29
+
+- Replace unexplained CI-policy jargon with plain automated-check wording across the site and README.
+- Add regression coverage for the first-screen fact, section heading, expanded README term, and removed jargon.
+
 ## 0.1.3 — 2026-08-29
 
 - Use the full product name and literal fidelity-report wording across the site and documentation.

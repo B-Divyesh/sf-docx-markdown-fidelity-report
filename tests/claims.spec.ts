@@ -122,7 +122,7 @@ test('@claim:single-binary the release build produces one CLI binary', async () 
   const binary = join(repo, 'target', 'release', 'docx-fidelity');
   await access(binary);
   const { stdout } = await exec(binary, ['--version']);
-  expect(stdout).toContain('docx-fidelity 0.1.3');
+  expect(stdout).toContain('docx-fidelity 0.1.4');
 });
 
 test('@claim:rust-toolchain Rust 1.88 builds the locked package', async () => {
@@ -184,7 +184,7 @@ test('@regression:free-scope the site states the registered free CLI scope and k
   const requests: string[] = [];
   page.on('request', (request) => requests.push(request.url()));
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: 'Stop CI on review issues' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Stop automated checks at selected risk levels' })).toBeVisible();
   expect(await page.locator('a[href*="checkout"]').count()).toBe(0);
   expect(await page.content()).not.toContain('api.sociobot.in');
   expect(requests.every((url) => new URL(url).origin === 'http://127.0.0.1:4173')).toBe(true);
@@ -209,6 +209,13 @@ test('@regression:review-copy uses one product name, plain section names, and fi
   expect(landingText).toContain('fidelity report');
   expect(landingText.toLowerCase()).not.toContain('risk ledger');
   expect(landingText.toLowerCase()).not.toContain('fidelity ledger');
+  await expect(page.locator('.plain-facts li').nth(2)).toHaveText('03 Stop automated checks when reports find selected risks.');
+  await expect(page.getByRole('heading', { name: 'Stop automated checks at selected risk levels' })).toBeVisible();
+  await expect(page.getByText('Use --fail-on warning|error to stop an automated check at the selected risk level.')).toBeVisible();
+  expect(landingText).not.toMatch(/CI policy|Stop CI/);
+  const readme = await readFile(join(repo, 'README.md'), 'utf8');
+  expect(readme).toContain('Continuous integration (CI) runs automated checks when a team changes files.');
+  expect(readme).not.toMatch(/CI policy|CI policy gates|make CI stop/);
   await page.goto('/?demo=1');
   await expect(page).toHaveTitle('Demo — Docx Markdown Fidelity Report');
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', 'https://docx-markdown-fidelity-report.sociobot.in/demo');

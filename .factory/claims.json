@@ -36,8 +36,8 @@
   },
   {
     "id": "ci-policy",
-    "claim": "CI policy gates stop a conversion at selected risk levels without a network connection.",
-    "where": "landing policy gates, README",
+    "claim": "The --fail-on option stops automated checks at selected risk levels without a network connection.",
+    "where": "landing automated-check section, README",
     "test": "npm test -- --grep @claim:ci-policy",
     "sandbox": "bundled complex DOCX with blocked findings; assert --fail-on exits 3 while HTTP proxies are unreachable"
   },

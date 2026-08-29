@@ -20,7 +20,7 @@ const footer = () => `
   <footer>
     <p>Convert DOCX and list review issues.</p>
     <nav aria-label="Footer navigation"><a href="/privacy" data-link>Privacy</a><a href="/terms" data-link>Terms</a><a href="https://sociobot.in/" rel="external">Built by Param Factory <span class="sr-only">(external)</span></a></nav>
-    <p class="build">v0.1.3 · build 2026.08.29</p>
+    <p class="build">v0.1.4 · build 2026.08.29</p>
   </footer>`;
 
 const contour = `<svg class="contours" viewBox="0 0 900 300" aria-hidden="true"><path d="M-30 240C130 100 220 315 385 175S680 40 940 135"/><path d="M-25 208C125 78 225 280 380 148S680 16 935 105"/><path d="M-20 176C120 56 230 245 375 121S680-8 930 75"/></svg>`;
@@ -38,7 +38,7 @@ const home = () => `
         <ul class="plain-facts" aria-label="Product facts">
           <li><span aria-hidden="true">01</span> Runs on your computer.</li>
           <li><span aria-hidden="true">02</span> Document data stays local.</li>
-          <li><span aria-hidden="true">03</span> CI policy checks are included.</li>
+          <li><span aria-hidden="true">03</span> Stop automated checks when reports find selected risks.</li>
         </ul>
       </div>
       <figure class="hero-map">
@@ -91,8 +91,8 @@ Sandbox: /tmp/docx-fidelity-demo-…</code></pre>
     </section>
 
     <section class="paid" aria-labelledby="policy-heading">
-      <div class="price-mark"><span>CI</span><small>checks</small></div>
-      <div><p class="eyebrow">Included workflow</p><h2 id="policy-heading">Stop CI on review issues</h2><p>Use <code>--fail-on warning|error</code> to fail a migration check at the risk level your team chooses.</p><p class="legal-note">Policy checks run locally with the conversion.</p></div>
+      <div class="price-mark"><span>STOP</span><small>checks</small></div>
+      <div><p class="eyebrow">Included workflow</p><h2 id="policy-heading">Stop automated checks at selected risk levels</h2><p>Use <code>--fail-on warning|error</code> to stop an automated check at the selected risk level.</p><p class="legal-note">Automated checks run locally with each conversion.</p></div>
       <div class="policy-actions"><a class="button primary" href="/#install">Install the CLI</a><code>docx-fidelity convert docs/ --output out/ --fail-on warning</code></div>
     </section>
   </main>
@@ -116,10 +116,10 @@ const demo = () => `
   ${footer()}`;
 
 const privacy = () => `
-  ${header()}<main id="main" tabindex="-1" class="prose-page"><p class="eyebrow">Policy · effective 29 August 2026</p><h1>Your documents stay on your computer.</h1><p>The CLI reads and writes local files. It has no telemetry and does not send document names or contents anywhere.</p><h2>CI policy checks</h2><p>The <code>--fail-on</code> option runs locally. It does not send a token.</p><h2>Demo data</h2><p>The browser demo loads bundled sample files from this site. Demo state uses keys beginning with <code>demo:</code>. Resetting or leaving the demo removes those keys.</p><h2>Site requests</h2><p>The static site loads fonts and art from its own origin. It has no analytics, advertising, or third-party scripts.</p><h2>Contact</h2><p>Email <a href="mailto:privacy@sociobot.in">privacy@sociobot.in</a> with a privacy question.</p></main>${footer()}`;
+  ${header()}<main id="main" tabindex="-1" class="prose-page"><p class="eyebrow">Policy · effective 29 August 2026</p><h1>Your documents stay on your computer.</h1><p>The CLI reads and writes local files. It has no telemetry and does not send document names or contents anywhere.</p><h2>Automated checks stay local</h2><p>The <code>--fail-on</code> option stops a check at your selected risk level. It does not send a token.</p><h2>Demo data</h2><p>The browser demo loads bundled sample files from this site. Demo state uses keys beginning with <code>demo:</code>. Resetting or leaving the demo removes those keys.</p><h2>Site requests</h2><p>The static site loads fonts and art from its own origin. It has no analytics, advertising, or third-party scripts.</p><h2>Contact</h2><p>Email <a href="mailto:privacy@sociobot.in">privacy@sociobot.in</a> with a privacy question.</p></main>${footer()}`;
 
 const terms = () => `
-  ${header()}<main id="main" tabindex="-1" class="prose-page"><p class="eyebrow">Terms · effective 29 August 2026</p><h1>Terms for using the CLI.</h1><p>You remain responsible for checking converted Markdown before publishing it.</p><h2>CI policy checks</h2><p>CI policy checks are included with the CLI. They run on your computer.</p><h2>Safe use</h2><p>Do not treat a clear report as proof that two formats render identically. Keep backups of source files. Do not inspect documents without permission.</p><h2>Limits</h2><p>The tool does not perform OCR, edit documents, or open embedded objects. The MIT License contains the full warranty limits.</p><h2>Contact</h2><p>Email <a href="mailto:support@sociobot.in">support@sociobot.in</a> with a terms question.</p></main>${footer()}`;
+  ${header()}<main id="main" tabindex="-1" class="prose-page"><p class="eyebrow">Terms · effective 29 August 2026</p><h1>Terms for using the CLI.</h1><p>You remain responsible for checking converted Markdown before publishing it.</p><h2>Automated checks are included</h2><p>The <code>--fail-on</code> option stops a check at your selected risk level. It runs on your computer.</p><h2>Safe use</h2><p>Do not treat a clear report as proof that two formats render identically. Keep backups of source files. Do not inspect documents without permission.</p><h2>Limits</h2><p>The tool does not perform OCR, edit documents, or open embedded objects. The MIT License contains the full warranty limits.</p><h2>Contact</h2><p>Email <a href="mailto:support@sociobot.in">support@sociobot.in</a> with a terms question.</p></main>${footer()}`;
 
 const notFound = () => `
   ${header()}<main id="main" tabindex="-1" class="not-found">${contour}<p class="eyebrow">Error 404</p><h1>Page not found.</h1><p>This page moved or never existed. Return to the product home page.</p><a class="button primary" href="/" data-link>Return home</a></main>${footer()}`;

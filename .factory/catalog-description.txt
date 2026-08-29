@@ -1,1 +1,1 @@
-Convert DOCX to Markdown and list every section that needs human review.
+Convert DOCX to Markdown and flag every section that needs a human check.

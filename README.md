@@ -54,11 +54,11 @@ The fidelity report covers tables, comments, tracked revisions, embedded objects
 
 - `0`: conversion completed. Findings may still need review.
 - `2`: bad arguments, unsafe input, or a read/write failure.
-- `3`: a CI policy threshold was met.
+- `3`: an automated check reached the selected risk level.
 
-## CI policy gates
+## Stop automated checks at selected risk levels
 
-All conversion, fidelity reports, and CI policy checks run locally. Use `--fail-on warning|error` to make CI stop at the selected risk level.
+Continuous integration (CI) runs automated checks when a team changes files. Use `--fail-on warning|error` to stop a check at the selected risk level. The conversion, fidelity report, and check all run locally.
 
 ```sh
 docx-fidelity convert docs/ --output out/ --fail-on error
