@@ -1,6 +1,6 @@
 # Handoff — release-blocking QA repair 3
 
-## Release status: repaired locally
+## Release status: repaired and deployed
 
 - Work order: `docx-markdown-fidelity-report-repair-3`
 - Verifier report: `.factory/verification-3.md`
@@ -45,7 +45,7 @@ Playwright regressions:
 - `npm run build`: passed; produced `dist/bin/docx-fidelity` and `dist/site/`, including `404.html`.
 - `npm run package`: passed; crate 95.4 KiB unpacked / 28.3 KiB compressed.
 - Clean package consumer: installed the 0.1.1 crate with `cargo install --locked`; `--version`, JSON demo, and an external Rust `convert_path` consumer passed. The demo produced nine findings.
-- Browser routes `/`, `/demo`, `/privacy`, `/terms`, and an unknown path passed at 1440×900 and 390×844: no page or console errors, no normal-size overflow, correct keyboard routing and focus, and zero axe serious/critical findings.
+- Browser routes `/`, `/demo`, `/privacy`, `/terms`, and an unknown path passed at 1440×900 and 390×844: valid routes had no page or console errors; all routes had no normal-size overflow, correct keyboard routing and focus, and zero axe serious/critical findings. The unknown-path navigation produced only Chromium's expected failed-resource diagnostic for its intentional HTTP 404.
 - Accessibility regression measured every visible link and button at 44 px or larger. Reduced-motion behavior, semantic landmarks, one H1, labels, and route announcements remained covered.
 - Privacy test observed same-origin requests only during the complete demo flow. CLI conversion and policy gates passed with unreachable HTTP proxies.
 - Offline/update test confirmed the versioned service worker precache and an offline navigation reload.
@@ -70,4 +70,14 @@ The researched brief names one-time monetization, but the Sociobot checkout was 
 
 ## Deployment
 
-Static deployment target: `https://docx-markdown-fidelity-report.sociobot.in`. Post-deploy hashes, headers, route status, screenshots, and verifier output will be appended after the committed repair is uploaded.
+- Repair commit: `5f070882efb5a724062e86f6d73de01b9e7f69ea`; local HEAD and `origin/main` matched before deployment.
+- Factory command: `/opt/fleet/lib/deploy-static.sh docx-markdown-fidelity-report dist/site`
+- Azure Static Web Apps deployment: `6a15b94e-c47f-4575-827c-2b956e476363`, existing Central US app.
+- Live URL: `https://docx-markdown-fidelity-report.sociobot.in`
+- Factory `verify-url.sh`: HTTP 200, 963 ms network-idle load, title/lang/main/H1/alt checks passed, zero valid-page console errors.
+- Route responses: `/`, `/demo`, `/privacy`, and `/terms` returned 200; `/not-a-route` returned 404 with the designed page.
+- All 15 publicly served files byte-matched `dist/site`. Key SHA-256 values: HTML/404 `b297cd08fa199558e9f6f98c8a7e6de51aac006c5f05f9e9dc5d334ab5479dd9`; JS `659aba87a4f8c924bf407b8191fc6601f39f226bcf1304fdf697ffc3fc364b18`; CSS `f4ab758dd13ec12944175e5876abe71dd393fa31c4ed3f962c000a52dbd43ec0`; service worker `17e664e753829fb3f824759d77feec04ad8081d1cf264e9ca9a23148c4f7cf58`.
+- Live response policy: HTML and 404 use 30-second revalidation; hashed assets use one-year immutable caching; CSP, HSTS, `nosniff`, referrer policy, and permissions policy are present.
+- Live browser matrix: both viewports, all routes, one H1/main, no overflow, same-origin requests only, zero serious/critical axe violations, and no undersized visible targets. Skip-link and main focus worked; reduced-motion durations were `0.00001s`.
+- Live service-worker test reloaded `/demo` offline with its heading and no page errors.
+- Live Lighthouse 13.4.1: performance 99, accessibility 100, best practices 100, SEO 100; FCP 1.05 s, LCP 1.95 s, TBT 0 ms, CLS 0.052, speed index 1.05 s.
