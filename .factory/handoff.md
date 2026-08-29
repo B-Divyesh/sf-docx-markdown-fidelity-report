@@ -1,3 +1,26 @@
+# Handoff — adversarial first-read review 1
+
+## Review status: FAIL
+
+- Work order: `docx-markdown-fidelity-report-review-1`
+- Reviewed live URL: <https://docx-markdown-fidelity-report.sociobot.in>
+- Reviewed: 2026-08-29 UTC
+- Full evidence: `.factory/review-1.md`
+
+No product code was changed. The review reran all declared claim tests, the full test suite, build, lint, Rust 1.88 test, live mobile/desktop first-read checks, demo isolation, request logging, route crawl, and CLI demo.
+
+### Open work
+
+1. **Blocking:** implement or formally re-scope the brief's one-time monetization; it remains absent.
+2. Use the single brief product name everywhere.
+3. Replace map-metaphor/vague headings and ledger/report terminology with the concrete rewrites in the review.
+
+### Verified working
+
+The one-click demo, demo namespace isolation, local-only browser request pattern, CLI temp-directory demo, claims suite, responsive routes, metadata, 404, and prior functional repairs pass.
+
+---
+
 # Handoff — independent verification 5
 
 ## Release status: PASS
