@@ -14,14 +14,14 @@ The command uses a fresh temporary directory and prints its path. The same flow 
 
 ## Install
 
-Build the single binary with stable Rust 1.80 or newer:
+Build the single binary with stable Rust 1.88 or newer:
 
 ```sh
 cargo install --path .
 docx-fidelity --help
 ```
 
-No office suite, account, or conversion service is required.
+No account or conversion service is required.
 
 ## Usage
 
@@ -50,7 +50,7 @@ Each input produces:
 - `<name>.fidelity.md`: a review checklist for people.
 - `<name>.media/`: safely named extracted images, when the DOCX contains images.
 
-The report covers tables, comments, tracked revisions, embedded objects, footnotes, non-default styles, and every image extraction outcome. Unknown or lossy constructs stay visible as findings.
+The report covers tables, comments, tracked revisions, embedded objects, footnotes, non-default styles, and every image extraction outcome. Unknown or lossy constructs stay visible as findings. Plain Word text that looks like Markdown stays literal in the output.
 
 ## Exit codes
 
@@ -70,7 +70,7 @@ The command does not require an account or network connection.
 
 ## Scope and safety
 
-The converter reads ZIP and XML parts with bounded file sizes. It rejects unsafe archive paths and never runs macros, links, or embedded files. It does not perform OCR, edit DOCX files, or round-trip PDF.
+The converter rejects ZIP or XML parts larger than 32 MiB and rejects unsafe archive paths. It reports, but never extracts or runs, macros and embedded files. It leaves source DOCX files unchanged and accepts DOCX rather than PDF or image input.
 
 ## Develop and verify
 

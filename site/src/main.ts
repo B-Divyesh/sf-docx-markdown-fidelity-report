@@ -83,7 +83,7 @@ Sandbox: /tmp/docx-fidelity-demo-…</code></pre>
     <section class="boundaries" aria-labelledby="boundaries-heading">
       <div><p class="eyebrow">Clear boundaries</p><h2 id="boundaries-heading">Know what stays untouched</h2></div>
       <ul><li>No OCR</li><li>No document editing</li><li>No PDF round-trip</li><li>No macro execution</li><li>No document upload</li></ul>
-      <p>The CLI reads bounded ZIP and XML parts. Embedded files are reported, never opened.</p>
+      <p>The CLI rejects ZIP or XML parts larger than 32 MiB. Embedded files are reported, never opened.</p>
     </section>
 
     <section class="paid" aria-labelledby="policy-heading">

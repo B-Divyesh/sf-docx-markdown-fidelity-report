@@ -2,7 +2,7 @@
 name = "docx-markdown-fidelity-report"
 version = "0.1.1"
 edition = "2021"
-rust-version = "1.80"
+rust-version = "1.88"
 description = "Convert DOCX to Markdown and emit a source-located fidelity report"
 license = "MIT"
 repository = "https://github.com/B-Divyesh/sf-docx-markdown-fidelity-report"

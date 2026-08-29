@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { mkdtemp, mkdir, copyFile, readFile, access, readdir } from 'node:fs/promises';
+import { mkdtemp, mkdir, copyFile, readFile, access, readdir, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { spawn } from 'node:child_process';
@@ -10,6 +10,16 @@ import { spawn } from 'node:child_process';
 const exec = promisify(execFile);
 const repo = resolve(import.meta.dirname, '..');
 const sample = join(repo, 'examples', 'field-guide.docx');
+
+async function makeDocx(path: string, document: string, parts: Record<string, string> = {}) {
+  const script = [
+    'import json, sys, zipfile',
+    'with zipfile.ZipFile(sys.argv[1], "w") as archive:',
+    '    archive.writestr("word/document.xml", sys.argv[2])',
+    '    for name, contents in json.loads(sys.argv[3]).items(): archive.writestr(name, contents)',
+  ].join('\n');
+  await exec('python3', ['-c', script, path, document, JSON.stringify(parts)]);
+}
 
 test('@claim:demo-conversion bundled demo writes Markdown and reports', async () => {
   const { stdout } = await exec('cargo', ['run', '--quiet', '--', '--json', 'demo'], { cwd: repo });
@@ -70,6 +80,121 @@ test('@claim:ci-policy policy gates work locally with the network unavailable', 
     });
   } catch (error) { code = Number((error as { code: number }).code); }
   expect(code).toBe(3);
+});
+
+test('@claim:source-text-fidelity Word-authored Markdown syntax stays literal', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'fidelity-source-text-'));
+  const input = join(root, 'plain-markdown-syntax.docx');
+  const output = join(root, 'out');
+  const document = '<w:document xmlns:w="urn:word"><w:body>'
+    + '<w:p><w:r><w:t># Plain Word paragraph</w:t></w:r></w:p>'
+    + '<w:p><w:r><w:t>[payroll](https://attacker.example)</w:t></w:r></w:p>'
+    + '<w:p><w:r><w:t>- Plain dash paragraph</w:t></w:r></w:p>'
+    + '<w:p><w:r><w:t>1</w:t></w:r><w:r><w:t>. Split numbered paragraph</w:t></w:r></w:p>'
+    + '<w:p><w:r><w:t>`literal code`</w:t></w:r></w:p>'
+    + '<w:p><w:r><w:t>&gt; Plain quote</w:t></w:r></w:p>'
+    + '<w:p><w:r><w:t>| Plain table syntax |</w:t></w:r></w:p>'
+    + '</w:body></w:document>';
+  await makeDocx(input, document);
+  await exec('cargo', ['run', '--quiet', '--', 'convert', input, '--output', output], { cwd: repo });
+  const markdown = await readFile(join(output, 'plain-markdown-syntax.md'), 'utf8');
+  const report = JSON.parse(await readFile(join(output, 'plain-markdown-syntax.fidelity.json'), 'utf8'));
+  expect(markdown).toContain('\\# Plain Word paragraph');
+  expect(markdown).toContain('\\[payroll\\]\\(https\\:\\/\\/attacker\\.example\\)');
+  expect(markdown).toContain('\\- Plain dash paragraph');
+  expect(markdown).toContain('1\\. Split numbered paragraph');
+  expect(markdown).toContain('\\`literal code\\`');
+  expect(markdown).toContain('\\> Plain quote');
+  expect(markdown).toContain('\\| Plain table syntax \\|');
+  expect(report).toMatchObject({ status: 'clear', findings: [] });
+});
+
+test('@claim:list-fidelity numbering.xml preserves ordered, bullet, and nested lists', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'fidelity-numbering-'));
+  const input = join(root, 'numbered-steps.docx');
+  const output = join(root, 'out');
+  const document = '<w:document xmlns:w="urn:word"><w:body>'
+    + '<w:p><w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="42"/></w:numPr></w:pPr><w:r><w:t>First required step</w:t></w:r></w:p>'
+    + '<w:p><w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="42"/></w:numPr></w:pPr><w:r><w:t>Second required step</w:t></w:r></w:p>'
+    + '<w:p><w:pPr><w:numPr><w:ilvl w:val="1"/><w:numId w:val="42"/></w:numPr></w:pPr><w:r><w:t>Nested check</w:t></w:r></w:p>'
+    + '</w:body></w:document>';
+  const numbering = '<w:numbering xmlns:w="urn:word"><w:abstractNum w:abstractNumId="7">'
+    + '<w:lvl w:ilvl="0"><w:numFmt w:val="decimal"/></w:lvl>'
+    + '<w:lvl w:ilvl="1"><w:numFmt w:val="bullet"/></w:lvl>'
+    + '</w:abstractNum><w:num w:numId="42"><w:abstractNumId w:val="7"/></w:num></w:numbering>';
+  await makeDocx(input, document, { 'word/numbering.xml': numbering });
+  await exec('cargo', ['run', '--quiet', '--', 'convert', input, '--output', output], { cwd: repo });
+  const markdown = await readFile(join(output, 'numbered-steps.md'), 'utf8');
+  const report = JSON.parse(await readFile(join(output, 'numbered-steps.fidelity.json'), 'utf8'));
+  expect(markdown).toContain('1. First required step');
+  expect(markdown).toContain('1. Second required step');
+  expect(markdown).toContain('    - Nested check');
+  expect(report).toMatchObject({ status: 'clear', findings: [] });
+});
+
+test('@claim:human-checklist every conversion writes a separate source-located review checklist', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'fidelity-checklist-'));
+  const output = join(root, 'out');
+  await exec('cargo', ['run', '--quiet', '--', 'convert', sample, '--output', output], { cwd: repo });
+  const checklist = await readFile(join(output, 'field-guide.fidelity.md'), 'utf8');
+  expect(checklist).toContain('## Review checklist');
+  expect(checklist).toContain('word/document.xml, paragraph');
+  expect(checklist).toContain('- [ ]');
+});
+
+test('@claim:single-binary the release build produces one documented CLI executable', async () => {
+  test.setTimeout(120_000);
+  await exec('cargo', ['build', '--release', '--locked'], { cwd: repo });
+  const binary = join(repo, 'target', 'release', 'docx-fidelity');
+  await access(binary);
+  const { stdout } = await exec(binary, ['--version']);
+  expect(stdout).toMatch(/^docx-fidelity 0\.1\.1/);
+});
+
+test('@claim:bounded-input ZIP parts larger than 32 MiB are rejected before output', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'fidelity-bounded-'));
+  const input = join(root, 'oversize.docx');
+  const output = join(root, 'out');
+  const script = "import sys,zipfile; z=zipfile.ZipFile(sys.argv[1],'w'); z.writestr('word/document.xml','<w:document xmlns:w=\"urn:word\"><w:body/></w:document>'); z.writestr('word/media/too-large.bin',b'x'*(32*1024*1024+1)); z.close()";
+  await exec('python3', ['-c', script, input]);
+  await expect(exec('cargo', ['run', '--quiet', '--', 'convert', input, '--output', output], { cwd: repo })).rejects.toMatchObject({ code: 2 });
+  await expect(access(join(output, 'oversize.md'))).rejects.toThrow();
+});
+
+test('@claim:scope-boundaries the CLI leaves DOCX sources unchanged and rejects PDF or image input', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'fidelity-scope-'));
+  const input = join(root, 'source.docx');
+  const pdf = join(root, 'source.pdf');
+  const image = join(root, 'scan.png');
+  const output = join(root, 'out');
+  await copyFile(sample, input);
+  const before = await readFile(input);
+  await exec('cargo', ['run', '--quiet', '--', 'convert', input, '--output', output], { cwd: repo });
+  expect(await readFile(input)).toEqual(before);
+  await writeFile(pdf, '%PDF-1.7 not a DOCX');
+  await expect(exec('cargo', ['run', '--quiet', '--', 'convert', pdf, '--output', output], { cwd: repo })).rejects.toMatchObject({ code: 2 });
+  await writeFile(image, 'not a DOCX');
+  await expect(exec('cargo', ['run', '--quiet', '--', 'convert', image, '--output', output], { cwd: repo })).rejects.toMatchObject({ code: 2 });
+});
+
+test('@claim:rust-toolchain the documented Rust 1.88 minimum builds the locked package', async () => {
+  test.setTimeout(240_000);
+  await exec('sh', ['scripts/test-msrv.sh'], { cwd: repo, timeout: 180_000 });
+  const cargoToml = await readFile(join(repo, 'Cargo.toml'), 'utf8');
+  expect(cargoToml).toContain('rust-version = "1.88"');
+});
+
+test('@claim:demo-sandbox demo reset and exit only clear the demo storage namespace', async ({ page }) => {
+  await page.goto('/demo');
+  await page.evaluate(() => { localStorage.setItem('demo:sample', 'remove me'); localStorage.setItem('real:sentinel', 'keep me'); });
+  await page.getByRole('button', { name: 'Reset demo' }).click();
+  expect(await page.evaluate(() => localStorage.getItem('demo:sample'))).toBeNull();
+  expect(await page.evaluate(() => localStorage.getItem('real:sentinel'))).toBe('keep me');
+  await page.evaluate(() => localStorage.setItem('demo:sample', 'remove me too'));
+  await page.getByRole('link', { name: 'Start for real' }).click();
+  await expect(page).toHaveURL(/\/$/);
+  expect(await page.evaluate(() => localStorage.getItem('demo:sample'))).toBeNull();
+  expect(await page.evaluate(() => localStorage.getItem('real:sentinel'))).toBe('keep me');
 });
 
 test('@regression:legacy-license-verify an existing token can still be checked directly', async () => {
@@ -156,6 +281,15 @@ test('@claim:safe-input unsafe archive paths are rejected without extraction', a
   const embeddedReport = JSON.parse(await readFile(join(embeddedOutput, 'embedded.fidelity.json'), 'utf8'));
   expect(embeddedReport.counts.embedded_objects).toBe(2);
   expect((await readdir(embeddedOutput)).some((name) => name.endsWith('.bin') || name.endsWith('.media'))).toBe(false);
+
+  const macro = join(root, 'macro.docx');
+  const macroScript = "import sys,zipfile; z=zipfile.ZipFile(sys.argv[1],'w'); z.writestr('word/document.xml','<w:document xmlns:w=\"urn:word\"><w:body><w:p><w:r><w:t>safe text</w:t></w:r></w:p></w:body></w:document>'); z.writestr('word/vbaProject.bin',b'DO NOT RUN'); z.close()";
+  await exec('python3', ['-c', macroScript, macro]);
+  const macroOutput = join(root, 'macro-output');
+  await exec('cargo', ['run', '--quiet', '--', 'convert', macro, '--output', macroOutput], { cwd: repo });
+  const macroReport = JSON.parse(await readFile(join(macroOutput, 'macro.fidelity.json'), 'utf8'));
+  expect(macroReport.findings.some((finding: { summary: string }) => finding.summary.includes('macro project'))).toBe(true);
+  expect((await readdir(macroOutput)).some((name) => name.endsWith('.bin') || name.endsWith('.media'))).toBe(false);
 });
 
 test('@regression:demo-ledger browser demo matches all bundled sample findings', async ({ page }) => {
@@ -214,4 +348,16 @@ test('@mobile first screen and demo keyboard path work at 390px', async ({ page 
   await expect(page.locator('h1')).toBeFocused();
   await expect(page.getByText('Demo — sample data, nothing is saved')).toBeVisible();
   expect((await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth))).toBe(true);
+});
+
+test('@mobile @regression:privacy-text-resize privacy text remains available at 200% text size', async ({ page }) => {
+  await page.goto('/privacy');
+  await page.addStyleTag({ url: '/test-text-200.css' });
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  const headingFits = await page.locator('h1').evaluate((heading) => {
+    const box = heading.getBoundingClientRect();
+    return heading.scrollWidth <= Math.ceil(box.width) && box.right <= innerWidth;
+  });
+  expect(headingFits).toBe(true);
 });
