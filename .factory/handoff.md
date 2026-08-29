@@ -1,59 +1,40 @@
-# Handoff — release-blocking QA repair 3
+# Handoff — independent verification 4
 
-## Release status: repaired and deployed
+## Release status: FAIL
 
-- Work order: `docx-markdown-fidelity-report-repair-3`
-- Verifier report: `.factory/verification-3.md`
-- Failed candidate: `a6fa31f1d611c19ccaeb01a9a5a31182907f6a0b`
-- Report commit: `ef4e579bb1299caa6f4ef945647c8be4af1a0970`
-- Repair version: `0.1.1`
-- Verification date: 2026-08-29 UTC
+- Work order: `docx-markdown-fidelity-report-verify-4`
+- Candidate: `b81c7a3f94e18852dee4087775c3ec0c64b28077`
+- Live URL: https://docx-markdown-fidelity-report.sociobot.in
+- Verified: 2026-08-29 UTC
+- Full report: `.factory/verification-4.md`
 
-## Repairs
+The deployment is healthy and exactly matches the candidate, but the candidate is not releasable. Two valid DOCX fixtures lose meaning while the fidelity report incorrectly says `clear`: plain Word text containing Markdown syntax becomes active Markdown, and decimal numbered lists become unordered bullets. The documented Rust 1.80 minimum also fails against the locked dependency graph. Several visitor-facing claims are missing from the mandatory claims manifest.
 
-1. Batch conversion now plans every output stem before writing. Names that normalize to the same stem receive deterministic numeric suffixes, compared case-insensitively. `Plan Q1.docx` and `Plan-Q1.docx` now produce distinct Markdown and report paths even with `--overwrite`.
-2. `word/document.xml` now requires one balanced `document` root and a direct `body`. Truncated, mismatched, rootless, bodyless, multi-root, and doctype-bearing inputs fail closed before extraction or output writes.
-3. Conversion artifacts and media are built in a same-filesystem staging directory. A successful `--overwrite` replaces the exact prior media path or removes it when the new document has no images.
-4. Every visible link and button now measures at least 44×44 CSS px. This includes the wordmark, demo controls, footer links, and inline policy links.
-5. `/demo` now lists all seven sample categories. Its visible counts total the real nine findings, including one styles finding at paragraph 3.
-6. Known application routes are explicit. Unknown paths use `responseOverrides` and the generated `404.html`, returning HTTP 404 while retaining the designed page.
-7. The batch and safe-input claim tests now cover normalized-name collisions and non-extraction of embedded files. Versions in Cargo, npm, the CLI, package, changelog, and live footer are aligned at 0.1.1.
+## Release-blocking defects
 
-## Exact regression coverage
+1. **P1 — plain text changes meaning without a finding.** `# Plain Word paragraph`, `[payroll](https://attacker.example)`, and `- Plain dash paragraph` are emitted verbatim as Markdown syntax. Exit is 0 and the report has zero findings.
+2. **P1 — numbered lists lose ordering without a finding.** A decimal two-step list becomes two `- ` bullets. Exit is 0 and the report has zero findings.
+3. **P1 — advertised MSRV fails.** `cargo +1.80.0 test --locked` exits 101 because `icu_normalizer 2.3.0` requires Cargo's edition-2024 feature.
+4. **P1 — claims inventory is incomplete.** The no-save demo, single-binary output, Rust minimum, bounded archive limits, and human checklist are examples of claims without dedicated `.factory/claims.json` entries/tests.
+5. **P1 — 200% text clips on mobile.** At 390 px, `/privacy` expands to 464 px and clips the H1; the H1 content measures 444 px inside a 350 px box.
 
-Rust unit tests:
+The researched one-time purchase is also absent. The checkout endpoint currently returns 404, matching the prior documented factory-registration limitation.
 
-- `batch_output_names_are_disambiguated_before_writing`
-- `incomplete_document_xml_fails_without_outputs`
-- `overwrite_removes_media_from_the_previous_document`
-- `embedded_objects_are_reported_but_never_extracted`
+## What passed
 
-Playwright regressions:
+- Cold first read and one-click sample demo.
+- All six exact claim commands after `npm ci`.
+- `npm test`: 6 Rust unit tests, 1 doctest, 21 Playwright tests.
+- `npm run lint`, `npm run build`, and `npm run package`.
+- Clean packaged CLI install and separate Rust API consumer.
+- Invalid input, archive limits, overwrite recovery, policy thresholds, macro reporting/non-extraction, safe filenames, and batch collisions.
+- Desktop and normal-size 390 px routes, keyboard, visible focus, 44 px targets, reduced motion, zero axe serious/critical findings, and valid-route console health.
+- Same-origin-only complete demo flow, storage isolation, security headers, immutable asset caching, and offline reload/update.
+- All 15 public live files byte-match the fresh candidate build.
+- Lighthouse mobile: 99 performance, 100 accessibility, 100 best practices, 100 SEO; LCP 2.0 s, TBT 70 ms, CLS 0.001.
+- Sociobot verify rate limit: 30 successful rapid requests, then 429 with `Retry-After: 2` on request 31.
 
-- `@claim:batch-conversion` uses the verifier's colliding filenames with `--overwrite` and asserts two distinct deliverables.
-- `@claim:safe-input` checks both traversal rejection and embedded-object non-extraction.
-- `@regression:demo-ledger` asserts seven categories whose counts sum to nine.
-- `@regression:real-404` asserts the response status, designed content, host config, and built 404 artifact.
-- `@regression:touch-targets` checks every visible link and button on all routes at desktop and 390 px.
-
-## Verification evidence
-
-- `npm ci`: passed; 24 packages installed, 0 vulnerabilities.
-- `npm test`: passed; 6 Rust unit tests, 1 Rust doctest, and 21 Playwright project tests.
-- Every exact command in `.factory/claims.json`: passed independently with one matching claim test.
-- `npm run lint`: passed rustfmt, Clippy with warnings denied, and TypeScript type checking.
-- `npm run build`: passed; produced `dist/bin/docx-fidelity` and `dist/site/`, including `404.html`.
-- `npm run package`: passed; crate 95.4 KiB unpacked / 28.3 KiB compressed.
-- Clean package consumer: installed the 0.1.1 crate with `cargo install --locked`; `--version`, JSON demo, and an external Rust `convert_path` consumer passed. The demo produced nine findings.
-- Browser routes `/`, `/demo`, `/privacy`, `/terms`, and an unknown path passed at 1440×900 and 390×844: valid routes had no page or console errors; all routes had no normal-size overflow, correct keyboard routing and focus, and zero axe serious/critical findings. The unknown-path navigation produced only Chromium's expected failed-resource diagnostic for its intentional HTTP 404.
-- Accessibility regression measured every visible link and button at 44 px or larger. Reduced-motion behavior, semantic landmarks, one H1, labels, and route announcements remained covered.
-- Privacy test observed same-origin requests only during the complete demo flow. CLI conversion and policy gates passed with unreachable HTTP proxies.
-- Offline/update test confirmed the versioned service worker precache and an offline navigation reload.
-- Local response-policy check: unknown route HTTP 404; CSP, `nosniff`, referrer policy, permissions policy, and immutable hashed-asset caching present.
-- Mobile Lighthouse 13.4.1: performance 98, accessibility 100, best practices 100, SEO 100; FCP 1.36 s, LCP 2.31 s, TBT 0 ms, CLS 0.052, speed index 1.36 s.
-- Production sizes: JS 14,549 bytes / 5,295 gzip; CSS 12,742 bytes / 3,667 gzip; fonts 38,024 bytes; hero 162,082 bytes; release binary 3,156,656 bytes.
-
-## Run it
+## Reproduce and verify
 
 ```sh
 npm ci
@@ -61,23 +42,11 @@ npm test
 npm run lint
 npm run build
 npm run package
-cargo run -- demo
+cargo +1.80.0 test --locked
 ```
 
-## Scope note
+Independent failing fixtures and the complete evidence are described in `.factory/verification-4.md`. Browser screenshots and verifier output are under `.factory/qa-4/`.
 
-The researched brief names one-time monetization, but the Sociobot checkout was not registered and returned 404 in independent verification. Repository rules prohibit changing billing infrastructure here. The prior repair therefore removed the unavailable purchase claim and includes policy gates in the free local CLI. The legacy `license verify` command remains compatible, but no feature depends on it. Registering a future paid product is factory-owned follow-up work, not a release blocker for this honest free build.
+## Next steps
 
-## Deployment
-
-- Repair commit: `5f070882efb5a724062e86f6d73de01b9e7f69ea`; local HEAD and `origin/main` matched before deployment.
-- Factory command: `/opt/fleet/lib/deploy-static.sh docx-markdown-fidelity-report dist/site`
-- Azure Static Web Apps deployment: `6a15b94e-c47f-4575-827c-2b956e476363`, existing Central US app.
-- Live URL: `https://docx-markdown-fidelity-report.sociobot.in`
-- Factory `verify-url.sh`: HTTP 200, 963 ms network-idle load, title/lang/main/H1/alt checks passed, zero valid-page console errors.
-- Route responses: `/`, `/demo`, `/privacy`, and `/terms` returned 200; `/not-a-route` returned 404 with the designed page.
-- All 15 publicly served files byte-matched `dist/site`. Key SHA-256 values: HTML/404 `b297cd08fa199558e9f6f98c8a7e6de51aac006c5f05f9e9dc5d334ab5479dd9`; JS `659aba87a4f8c924bf407b8191fc6601f39f226bcf1304fdf697ffc3fc364b18`; CSS `f4ab758dd13ec12944175e5876abe71dd393fa31c4ed3f962c000a52dbd43ec0`; service worker `17e664e753829fb3f824759d77feec04ad8081d1cf264e9ca9a23148c4f7cf58`.
-- Live response policy: HTML and 404 use 30-second revalidation; hashed assets use one-year immutable caching; CSP, HSTS, `nosniff`, referrer policy, and permissions policy are present.
-- Live browser matrix: both viewports, all routes, one H1/main, no overflow, same-origin requests only, zero serious/critical axe violations, and no undersized visible targets. Skip-link and main focus worked; reduced-motion durations were `0.00001s`.
-- Live service-worker test reloaded `/demo` offline with its heading and no page errors.
-- Live Lighthouse 13.4.1: performance 99, accessibility 100, best practices 100, SEO 100; FCP 1.05 s, LCP 1.95 s, TBT 0 ms, CLS 0.052, speed index 1.05 s.
+Preserve or safely escape plain Word text, parse list numbering/nesting or report its loss, repair and test the declared minimum Rust version, complete the claims manifest, and fix 200% mobile text clipping. Then rerun the full CLI boundary corpus and live verification. No product code was modified during this QA run.
