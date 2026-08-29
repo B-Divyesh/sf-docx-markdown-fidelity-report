@@ -1,0 +1,76 @@
+{
+  "checkedAt": "2026-08-29T16:31:27.216Z",
+  "origin": "https://docx-markdown-fidelity-report.sociobot.in",
+  "routes": [
+    {
+      "path": "/",
+      "status": 200,
+      "title": "Docx Markdown Fidelity Report — review DOCX",
+      "h1": "Convert DOCX and list review issues.",
+      "axeViolations": 0
+    },
+    {
+      "path": "/?demo=1",
+      "status": 200,
+      "title": "Demo — Docx Markdown Fidelity Report",
+      "h1": "See the sample DOCX conversion report.",
+      "axeViolations": 0
+    },
+    {
+      "path": "/demo",
+      "status": 200,
+      "title": "Demo — Docx Markdown Fidelity Report",
+      "h1": "See the sample DOCX conversion report.",
+      "axeViolations": 0
+    },
+    {
+      "path": "/privacy",
+      "status": 200,
+      "title": "Privacy — Docx Markdown Fidelity Report",
+      "h1": "Your documents stay on your computer.",
+      "axeViolations": 0
+    },
+    {
+      "path": "/terms",
+      "status": 200,
+      "title": "Terms — Docx Markdown Fidelity Report",
+      "h1": "Terms for using the CLI.",
+      "axeViolations": 0
+    },
+    {
+      "path": "/not-a-route",
+      "status": 404,
+      "title": "Page not found — Docx Markdown Fidelity Report",
+      "h1": "Page not found.",
+      "axeViolations": 0
+    }
+  ],
+  "links": [
+    {
+      "href": "https://docx-markdown-fidelity-report.sociobot.in/",
+      "status": 200
+    },
+    {
+      "href": "https://docx-markdown-fidelity-report.sociobot.in/?demo=1",
+      "status": 200
+    },
+    {
+      "href": "https://docx-markdown-fidelity-report.sociobot.in/privacy",
+      "status": 200
+    },
+    {
+      "href": "https://docx-markdown-fidelity-report.sociobot.in/terms",
+      "status": 200
+    },
+    {
+      "href": "https://sociobot.in/",
+      "status": 200
+    }
+  ],
+  "firstScreenFits": true,
+  "sameOriginDemoRequests": true,
+  "demoIsolation": true,
+  "routeFocusAndBack": true,
+  "offlineReload": true,
+  "consoleErrors": []
+}
