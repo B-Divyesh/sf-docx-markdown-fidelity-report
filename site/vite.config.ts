@@ -1,5 +1,5 @@
 import { defineConfig, type Plugin } from 'vite';
-import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { copyFileSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const output = resolve(import.meta.dirname, '../dist/site');
@@ -16,6 +16,7 @@ const precacheShell = (): Plugin => ({
       .replace('__PRECACHE_ASSETS__', JSON.stringify(assets.map((entry) => `/assets/${entry}`)));
     if (worker.includes('__BUILD_ID__') || worker.includes('__PRECACHE_ASSETS__')) throw new Error('The service worker precache placeholders were not replaced.');
     writeFileSync(workerPath, worker);
+    copyFileSync(resolve(output, 'index.html'), resolve(output, '404.html'));
   },
 });
 

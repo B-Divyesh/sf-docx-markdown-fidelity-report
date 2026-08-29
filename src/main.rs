@@ -1,6 +1,6 @@
 use anyhow::{bail, Context, Result};
 use clap::{Parser, Subcommand, ValueEnum};
-use docx_fidelity::{convert_path, discover_inputs, ConversionResult, ConvertOptions, Severity};
+use docx_fidelity::{convert_paths, ConversionResult, ConvertOptions, Severity};
 use serde::{Deserialize, Serialize};
 use std::env;
 use std::fs;
@@ -161,15 +161,8 @@ fn run() -> Result<u8> {
 }
 
 fn convert_all(input: &Path, output: &Path, overwrite: bool) -> Result<Vec<ConversionResult>> {
-    let inputs = discover_inputs(input)?;
     let options = ConvertOptions { overwrite };
-    inputs
-        .iter()
-        .map(|path| {
-            convert_path(path, output, &options)
-                .with_context(|| format!("conversion failed for {}", path.display()))
-        })
-        .collect()
+    convert_paths(input, output, &options)
 }
 
 fn print_results(results: &[ConversionResult], json: bool) -> Result<()> {

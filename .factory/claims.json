@@ -25,7 +25,7 @@
     "claim": "One command converts every DOCX in a directory.",
     "where": "landing how it works, README",
     "test": "npm test -- --grep @claim:batch-conversion",
-    "sandbox": "fresh directory with two DOCX fixtures; assert two Markdown files and two reports"
+    "sandbox": "fresh directory with two DOCX fixtures whose names normalize to the same safe stem; assert two distinct Markdown files and reports"
   },
   {
     "id": "ci-policy",
@@ -39,6 +39,6 @@
     "claim": "The CLI rejects unsafe archive paths and never extracts embedded objects.",
     "where": "landing boundaries, README",
     "test": "npm test -- --grep @claim:safe-input",
-    "sandbox": "malicious DOCX fixture with a parent-directory entry; assert exit 2 and no escaped file"
+    "sandbox": "malicious path and embedded-object DOCX fixtures; assert exit 2 with no escaped file and no embedded-object extraction"
   }
 ]

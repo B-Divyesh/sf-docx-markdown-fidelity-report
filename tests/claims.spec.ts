@@ -49,11 +49,15 @@ test('@claim:risk-ledger complex DOCX reports every promised category and locati
 test('@claim:batch-conversion a directory creates one result per DOCX', async () => {
   const root = await mkdtemp(join(tmpdir(), 'fidelity-batch-'));
   const input = join(root, 'in'); const output = join(root, 'out');
-  await mkdir(input); await copyFile(sample, join(input, 'guide-one.docx')); await copyFile(sample, join(input, 'guide-two.docx'));
-  const { stdout } = await exec('cargo', ['run', '--quiet', '--', '--json', 'convert', input, '--output', output], { cwd: repo });
+  await mkdir(input); await copyFile(sample, join(input, 'Plan Q1.docx')); await copyFile(sample, join(input, 'Plan-Q1.docx'));
+  const { stdout } = await exec('cargo', ['run', '--quiet', '--', '--json', 'convert', input, '--output', output, '--overwrite'], { cwd: repo });
   const result = JSON.parse(stdout.trim());
   expect(result.converted).toBe(2);
-  await access(join(output, 'guide-one.md')); await access(join(output, 'guide-two.fidelity.json'));
+  const markdownPaths = result.outputs.map((item: { markdown: string }) => item.markdown);
+  const reportPaths = result.outputs.map((item: { report: string }) => item.report);
+  expect(new Set(markdownPaths).size).toBe(2);
+  expect(new Set(reportPaths).size).toBe(2);
+  await Promise.all([...markdownPaths, ...reportPaths].map((path) => access(path)));
 });
 
 test('@claim:ci-policy policy gates work locally with the network unavailable', async () => {
@@ -143,6 +147,49 @@ test('@claim:safe-input unsafe archive paths are rejected without extraction', a
   expect(code).toBe(2);
   expect(stderr).toContain('unsafe archive path');
   await expect(access(join(root, 'escaped.txt'))).rejects.toThrow();
+
+  const embedded = join(root, 'embedded.docx');
+  const embeddedScript = "import sys,zipfile; z=zipfile.ZipFile(sys.argv[1],'w'); z.writestr('word/document.xml','<w:document xmlns:w=\"urn:word\"><w:body><w:p><w:object/></w:p></w:body></w:document>'); z.writestr('word/embeddings/payload.bin',b'DO NOT EXTRACT'); z.close()";
+  await exec('python3', ['-c', embeddedScript, embedded]);
+  const embeddedOutput = join(root, 'embedded-output');
+  await exec('cargo', ['run', '--quiet', '--', 'convert', embedded, '--output', embeddedOutput], { cwd: repo });
+  const embeddedReport = JSON.parse(await readFile(join(embeddedOutput, 'embedded.fidelity.json'), 'utf8'));
+  expect(embeddedReport.counts.embedded_objects).toBe(2);
+  expect((await readdir(embeddedOutput)).some((name) => name.endsWith('.bin') || name.endsWith('.media'))).toBe(false);
+});
+
+test('@regression:demo-ledger browser demo matches all bundled sample findings', async ({ page }) => {
+  await page.goto('/demo');
+  await expect(page.getByRole('heading', { name: 'The sample marks seven risk areas' })).toBeVisible();
+  const categories = await page.locator('.demo-result dt').allTextContents();
+  const counts = (await page.locator('.demo-result dd').allTextContents()).map((value) => Number.parseInt(value, 10));
+  expect(categories).toEqual(['Tables', 'Comments', 'Revisions', 'Embedded objects', 'Footnotes', 'Styles', 'Images']);
+  expect(counts.reduce((total, count) => total + count, 0)).toBe(9);
+  await expect(page.locator('#terminal-output')).toContainText('STYLES               1 warning');
+});
+
+test('@regression:real-404 unknown routes return HTTP 404 with the designed page', async ({ page }) => {
+  const response = await page.goto('/not-a-route');
+  expect(response?.status()).toBe(404);
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('This path is outside the survey.');
+  const config = JSON.parse(await readFile(join(repo, 'site', 'public', 'staticwebapp.config.json'), 'utf8'));
+  expect(config.navigationFallback).toBeUndefined();
+  expect(config.responseOverrides?.['404']?.rewrite).toBe('/404.html');
+  await access(join(repo, 'dist', 'site', '404.html'));
+});
+
+test('@mobile @regression:touch-targets every visible link and button is at least 44px', async ({ page }) => {
+  for (const route of ['/', '/demo', '/privacy', '/terms', '/not-a-route']) {
+    await page.goto(route);
+    const undersized = await page.locator('a, button').evaluateAll((elements) => elements.flatMap((element) => {
+      const rectangle = element.getBoundingClientRect();
+      if (rectangle.width === 0 || rectangle.height === 0) return [];
+      return rectangle.width < 44 || rectangle.height < 44
+        ? [{ text: element.textContent?.trim(), width: rectangle.width, height: rectangle.height }]
+        : [];
+    }));
+    expect(undersized, `${route} contains an undersized interactive target`).toEqual([]);
+  }
 });
 
 for (const route of ['/', '/demo', '/privacy', '/terms', '/not-a-route']) {

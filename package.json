@@ -1,6 +1,6 @@
 {
   "name": "docx-markdown-fidelity-report",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "type": "module",
   "scripts": {
@@ -13,7 +13,7 @@
     "build:site": "vite build --config site/vite.config.ts",
     "build": "npm run build:cli && npm run build:site",
     "package": "cargo package --allow-dirty --no-verify",
-    "preview": "vite preview --config site/vite.config.ts"
+    "preview": "node site/preview-server.mjs"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.10.2",

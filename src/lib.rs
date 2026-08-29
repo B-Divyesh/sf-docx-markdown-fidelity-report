@@ -123,6 +123,52 @@ pub fn convert_path(
     options: &ConvertOptions,
 ) -> Result<ConversionResult> {
     let input = input.as_ref();
+    let output_dir = output_dir.as_ref();
+    let stem = safe_stem(
+        input
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .unwrap_or("document"),
+    );
+    let paths = output_paths(output_dir, &stem);
+    preflight_outputs(std::slice::from_ref(&paths), options.overwrite)?;
+    convert_path_to(input, output_dir, &stem, options)
+}
+
+/// Convert one DOCX or every DOCX in a directory with collision-free output names.
+///
+/// The complete batch is planned before conversion starts. Inputs whose safe names
+/// normalize to the same stem receive a numeric suffix, so no result can replace
+/// another result even when `overwrite` is enabled.
+pub fn convert_paths(
+    input: impl AsRef<Path>,
+    output_dir: impl AsRef<Path>,
+    options: &ConvertOptions,
+) -> Result<Vec<ConversionResult>> {
+    let inputs = discover_inputs(input)?;
+    let output_dir = output_dir.as_ref();
+    let stems = unique_output_stems(&inputs);
+    let paths: Vec<_> = stems
+        .iter()
+        .map(|stem| output_paths(output_dir, stem))
+        .collect();
+    preflight_outputs(&paths, options.overwrite)?;
+    inputs
+        .iter()
+        .zip(stems)
+        .map(|(path, stem)| {
+            convert_path_to(path, output_dir, &stem, options)
+                .with_context(|| format!("conversion failed for {}", path.display()))
+        })
+        .collect()
+}
+
+fn convert_path_to(
+    input: &Path,
+    output_dir: &Path,
+    stem: &str,
+    options: &ConvertOptions,
+) -> Result<ConversionResult> {
     if input
         .extension()
         .and_then(|s| s.to_str())
@@ -137,35 +183,16 @@ pub fn convert_path(
     if !metadata.is_file() {
         bail!("input is not a file: {}", input.display());
     }
-    let output_dir = output_dir.as_ref();
     fs::create_dir_all(output_dir)
         .with_context(|| format!("cannot create {}", output_dir.display()))?;
-    let stem = safe_stem(
-        input
-            .file_stem()
-            .and_then(|s| s.to_str())
-            .unwrap_or("document"),
-    );
-    let markdown_path = output_dir.join(format!("{stem}.md"));
-    let json_report_path = output_dir.join(format!("{stem}.fidelity.json"));
-    let markdown_report_path = output_dir.join(format!("{stem}.fidelity.md"));
-    let media_dir = output_dir.join(format!("{stem}.media"));
-    if !options.overwrite {
-        for path in [&markdown_path, &json_report_path, &markdown_report_path] {
-            if path.exists() {
-                bail!(
-                    "output exists: {} (pass --overwrite to replace it)",
-                    path.display()
-                );
-            }
-        }
-    }
+    let final_paths = output_paths(output_dir, stem);
 
     let file = File::open(input)?;
     let mut archive = ZipArchive::new(file).context("input is not a valid DOCX ZIP archive")?;
     validate_archive(&mut archive)?;
     let document =
         read_part(&mut archive, "word/document.xml")?.context("DOCX has no word/document.xml")?;
+    validate_document_xml(&document).context("word/document.xml is malformed")?;
     let rels = read_part(&mut archive, "word/_rels/document.xml.rels")?
         .map(|xml| parse_relationships(&xml))
         .transpose()?
@@ -183,7 +210,9 @@ pub fn convert_path(
         .transpose()?
         .unwrap_or_default();
 
-    fs::create_dir_all(&media_dir)?;
+    let staging = StagingDir::create(output_dir)?;
+    let staged_paths = output_paths(&staging.path, stem);
+    fs::create_dir_all(&staged_paths.media_dir)?;
     let mut state = parse_document(
         &document,
         &rels,
@@ -191,7 +220,7 @@ pub fn convert_path(
         &comments,
         &footnotes,
         &mut archive,
-        &media_dir,
+        &staged_paths.media_dir,
     )?;
     for (id, text) in &comments {
         if !state.comment_seen.contains(id) {
@@ -226,24 +255,159 @@ pub fn convert_path(
                 .push_str(&format!("[^{id}]: {}\n", escape_markdown(&text)));
         }
     }
-    if fs::read_dir(&media_dir)?.next().is_none() {
-        fs::remove_dir(&media_dir)?;
+    if fs::read_dir(&staged_paths.media_dir)?.next().is_none() {
+        fs::remove_dir(&staged_paths.media_dir)?;
     }
     let report = build_report(input, state.findings);
-    fs::write(&markdown_path, state.markdown.trim_end().to_owned() + "\n")?;
     fs::write(
-        &json_report_path,
+        &staged_paths.markdown,
+        state.markdown.trim_end().to_owned() + "\n",
+    )?;
+    fs::write(
+        &staged_paths.json_report,
         serde_json::to_string_pretty(&report)? + "\n",
     )?;
-    fs::write(&markdown_report_path, render_report(&report))?;
+    fs::write(&staged_paths.markdown_report, render_report(&report))?;
+    commit_outputs(&staged_paths, &final_paths, options.overwrite)?;
     Ok(ConversionResult {
         input: input.to_path_buf(),
-        markdown_path,
-        json_report_path,
-        markdown_report_path,
-        media_dir,
+        markdown_path: final_paths.markdown,
+        json_report_path: final_paths.json_report,
+        markdown_report_path: final_paths.markdown_report,
+        media_dir: final_paths.media_dir,
         report,
     })
+}
+
+#[derive(Clone)]
+struct OutputPaths {
+    markdown: PathBuf,
+    json_report: PathBuf,
+    markdown_report: PathBuf,
+    media_dir: PathBuf,
+}
+
+fn output_paths(output_dir: &Path, stem: &str) -> OutputPaths {
+    OutputPaths {
+        markdown: output_dir.join(format!("{stem}.md")),
+        json_report: output_dir.join(format!("{stem}.fidelity.json")),
+        markdown_report: output_dir.join(format!("{stem}.fidelity.md")),
+        media_dir: output_dir.join(format!("{stem}.media")),
+    }
+}
+
+fn unique_output_stems(inputs: &[PathBuf]) -> Vec<String> {
+    let mut used = HashSet::new();
+    inputs
+        .iter()
+        .map(|input| {
+            let base = safe_stem(
+                input
+                    .file_stem()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or("document"),
+            );
+            let mut candidate = base.clone();
+            let mut suffix = 2usize;
+            while !used.insert(candidate.to_ascii_lowercase()) {
+                candidate = format!("{base}-{suffix}");
+                suffix += 1;
+            }
+            candidate
+        })
+        .collect()
+}
+
+fn preflight_outputs(paths: &[OutputPaths], overwrite: bool) -> Result<()> {
+    if overwrite {
+        return Ok(());
+    }
+    for outputs in paths {
+        for path in [
+            &outputs.markdown,
+            &outputs.json_report,
+            &outputs.markdown_report,
+            &outputs.media_dir,
+        ] {
+            if path.exists() {
+                bail!(
+                    "output exists: {} (pass --overwrite to replace it)",
+                    path.display()
+                );
+            }
+        }
+    }
+    Ok(())
+}
+
+fn commit_outputs(staged: &OutputPaths, final_paths: &OutputPaths, overwrite: bool) -> Result<()> {
+    for (source, destination) in [
+        (&staged.markdown, &final_paths.markdown),
+        (&staged.json_report, &final_paths.json_report),
+        (&staged.markdown_report, &final_paths.markdown_report),
+    ] {
+        replace_path(source, destination, overwrite)?;
+    }
+    if staged.media_dir.exists() {
+        replace_path(&staged.media_dir, &final_paths.media_dir, overwrite)?;
+    } else if overwrite && final_paths.media_dir.exists() {
+        remove_exact_path(&final_paths.media_dir)?;
+    }
+    Ok(())
+}
+
+fn replace_path(source: &Path, destination: &Path, overwrite: bool) -> Result<()> {
+    if destination.exists() {
+        if !overwrite {
+            bail!(
+                "output exists: {} (pass --overwrite to replace it)",
+                destination.display()
+            );
+        }
+        remove_exact_path(destination)?;
+    }
+    fs::rename(source, destination)
+        .with_context(|| format!("cannot move completed output to {}", destination.display()))
+}
+
+fn remove_exact_path(path: &Path) -> Result<()> {
+    let metadata = fs::symlink_metadata(path)?;
+    if metadata.file_type().is_dir() && !metadata.file_type().is_symlink() {
+        fs::remove_dir_all(path)?;
+    } else {
+        fs::remove_file(path)?;
+    }
+    Ok(())
+}
+
+struct StagingDir {
+    path: PathBuf,
+}
+
+impl StagingDir {
+    fn create(parent: &Path) -> Result<Self> {
+        for attempt in 0..1000 {
+            let path = parent.join(format!(
+                ".docx-fidelity-stage-{}-{attempt}",
+                std::process::id()
+            ));
+            match fs::create_dir(&path) {
+                Ok(()) => return Ok(Self { path }),
+                Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => continue,
+                Err(error) => return Err(error.into()),
+            }
+        }
+        bail!(
+            "cannot create a unique staging directory in {}",
+            parent.display()
+        )
+    }
+}
+
+impl Drop for StagingDir {
+    fn drop(&mut self) {
+        let _ = fs::remove_dir_all(&self.path);
+    }
 }
 
 pub fn discover_inputs(input: impl AsRef<Path>) -> Result<Vec<PathBuf>> {
@@ -299,6 +463,70 @@ fn read_part<R: Read + Seek>(archive: &mut ZipArchive<R>, name: &str) -> Result<
     let mut bytes = Vec::with_capacity(entry.size() as usize);
     entry.read_to_end(&mut bytes)?;
     Ok(Some(bytes))
+}
+
+fn validate_document_xml(xml: &[u8]) -> Result<()> {
+    let mut reader = Reader::from_reader(xml);
+    let mut stack: Vec<Vec<u8>> = Vec::new();
+    let mut saw_document = false;
+    let mut saw_body = false;
+    loop {
+        match reader.read_event()? {
+            Event::Start(event) => {
+                let name = local_name(event.name().as_ref()).to_vec();
+                if stack.is_empty() {
+                    if saw_document || name != b"document" {
+                        bail!("expected one `document` root element");
+                    }
+                    saw_document = true;
+                } else if stack.len() == 1 && name == b"body" {
+                    saw_body = true;
+                }
+                stack.push(name);
+            }
+            Event::Empty(event) => {
+                let name = local_name(event.name().as_ref()).to_vec();
+                if stack.is_empty() {
+                    bail!("the `document` root element cannot be empty");
+                }
+                if stack.len() == 1 && name == b"body" {
+                    saw_body = true;
+                }
+            }
+            Event::End(event) => {
+                let name = local_name(event.name().as_ref()).to_vec();
+                let Some(open_name) = stack.pop() else {
+                    bail!("found a closing element without an opening element");
+                };
+                if open_name != name {
+                    bail!(
+                        "closing element `{}` does not match `{}`",
+                        String::from_utf8_lossy(&name),
+                        String::from_utf8_lossy(&open_name)
+                    );
+                }
+            }
+            Event::Text(text) if stack.is_empty() && !text.unescape()?.trim().is_empty() => {
+                bail!("found text outside the `document` root element");
+            }
+            Event::DocType(_) => bail!("document type declarations are not allowed"),
+            Event::Eof => break,
+            _ => {}
+        }
+    }
+    if !saw_document {
+        bail!("the `document` root element is missing");
+    }
+    if !saw_body {
+        bail!("the `document` body element is missing");
+    }
+    if let Some(open_name) = stack.last() {
+        bail!(
+            "the `{}` element is not closed",
+            String::from_utf8_lossy(open_name)
+        );
+    }
+    Ok(())
 }
 
 fn parse_relationships(xml: &[u8]) -> Result<HashMap<String, String>> {
@@ -1230,6 +1458,28 @@ fn safe_display_name(name: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::io::Write;
+    use tempfile::tempdir;
+    use zip::write::SimpleFileOptions;
+
+    fn write_docx(path: &Path, document_xml: &str, parts: &[(&str, &[u8])]) {
+        let file = File::create(path).unwrap();
+        let mut archive = zip::ZipWriter::new(file);
+        let options = SimpleFileOptions::default();
+        archive.start_file("word/document.xml", options).unwrap();
+        archive.write_all(document_xml.as_bytes()).unwrap();
+        for (name, contents) in parts {
+            archive.start_file(*name, options).unwrap();
+            archive.write_all(contents).unwrap();
+        }
+        archive.finish().unwrap();
+    }
+
+    fn document_with_text(text: &str) -> String {
+        format!(
+            r#"<w:document xmlns:w="urn:word"><w:body><w:p><w:r><w:t>{text}</w:t></w:r></w:p></w:body></w:document>"#
+        )
+    }
 
     #[test]
     fn safe_names_cannot_escape() {
@@ -1247,5 +1497,98 @@ mod tests {
             normalize_word_target("../custom/item.xml"),
             "custom/item.xml"
         );
+    }
+
+    #[test]
+    fn batch_output_names_are_disambiguated_before_writing() {
+        let root = tempdir().unwrap();
+        let input = root.path().join("input");
+        let output = root.path().join("output");
+        fs::create_dir(&input).unwrap();
+        write_docx(
+            &input.join("Plan Q1.docx"),
+            &document_with_text("FIRST"),
+            &[],
+        );
+        write_docx(
+            &input.join("Plan-Q1.docx"),
+            &document_with_text("SECOND"),
+            &[],
+        );
+
+        let results = convert_paths(&input, &output, &ConvertOptions { overwrite: true }).unwrap();
+
+        assert_eq!(results.len(), 2);
+        assert_ne!(results[0].markdown_path, results[1].markdown_path);
+        let markdown: HashSet<_> = results
+            .iter()
+            .map(|result| fs::read_to_string(&result.markdown_path).unwrap())
+            .collect();
+        assert_eq!(
+            markdown,
+            HashSet::from(["FIRST\n".into(), "SECOND\n".into()])
+        );
+    }
+
+    #[test]
+    fn incomplete_document_xml_fails_without_outputs() {
+        let root = tempdir().unwrap();
+        let input = root.path().join("broken.docx");
+        let output = root.path().join("output");
+        write_docx(&input, "<w:document><broken>", &[]);
+
+        let error = convert_path(&input, &output, &ConvertOptions::default()).unwrap_err();
+
+        assert!(format!("{error:#}").contains("word/document.xml is malformed"));
+        assert!(!output.join("broken.md").exists());
+        assert!(!output.join("broken.fidelity.json").exists());
+    }
+
+    #[test]
+    fn overwrite_removes_media_from_the_previous_document() {
+        let root = tempdir().unwrap();
+        let input = root.path().join("guide.docx");
+        let output = root.path().join("output");
+        let relationships =
+            br#"<Relationships><Relationship Id="rId1" Target="media/old.svg"/></Relationships>"#;
+        let with_image = r#"<w:document xmlns:w="urn:word" xmlns:a="urn:drawing" xmlns:r="urn:rels"><w:body><w:p><w:r><a:blip r:embed="rId1"/></w:r></w:p></w:body></w:document>"#;
+        write_docx(
+            &input,
+            with_image,
+            &[
+                ("word/_rels/document.xml.rels", relationships),
+                ("word/media/old.svg", b"<svg/>"),
+            ],
+        );
+        convert_path(&input, &output, &ConvertOptions::default()).unwrap();
+        assert!(output.join("guide.media/image-001.svg").exists());
+
+        write_docx(&input, &document_with_text("NO IMAGE"), &[]);
+        convert_path(&input, &output, &ConvertOptions { overwrite: true }).unwrap();
+
+        assert!(!output.join("guide.media").exists());
+        assert_eq!(
+            fs::read_to_string(output.join("guide.md")).unwrap(),
+            "NO IMAGE\n"
+        );
+    }
+
+    #[test]
+    fn embedded_objects_are_reported_but_never_extracted() {
+        let root = tempdir().unwrap();
+        let input = root.path().join("embedded.docx");
+        let output = root.path().join("output");
+        let document = r#"<w:document xmlns:w="urn:word"><w:body><w:p><w:object/></w:p></w:body></w:document>"#;
+        write_docx(
+            &input,
+            document,
+            &[("word/embeddings/payload.bin", b"DO NOT EXTRACT")],
+        );
+
+        let result = convert_path(&input, &output, &ConvertOptions::default()).unwrap();
+
+        assert_eq!(result.report.counts["embedded_objects"], 2);
+        assert!(!output.join("embedded.media").exists());
+        assert!(!output.join("payload.bin").exists());
     }
 }

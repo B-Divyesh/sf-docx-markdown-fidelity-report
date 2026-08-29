@@ -16,7 +16,7 @@ const footer = () => `
   <footer>
     <p>Convert DOCX and map every review risk.</p>
     <nav aria-label="Footer navigation"><a href="/privacy" data-link>Privacy</a><a href="/terms" data-link>Terms</a><a href="https://sociobot.in/" rel="external">Built by Param Factory <span class="sr-only">(external)</span></a></nav>
-    <p class="build">v0.1.0 · build 2026.08.28</p>
+    <p class="build">v0.1.1 · build 2026.08.29</p>
   </footer>`;
 
 const contour = `<svg class="contours" viewBox="0 0 900 300" aria-hidden="true"><path d="M-30 240C130 100 220 315 385 175S680 40 940 135"/><path d="M-25 208C125 78 225 280 380 148S680 16 935 105"/><path d="M-20 176C120 56 230 245 375 121S680-8 930 75"/></svg>`;
@@ -104,8 +104,8 @@ const demo = () => `
       <pre id="terminal-output" tabindex="0" aria-live="polite"><code></code></pre>
     </section>
     <section class="demo-result" aria-labelledby="demo-result-heading">
-      <div><p class="eyebrow">Generated fidelity ledger</p><h2 id="demo-result-heading">The sample stops at six risk areas</h2><p>The Markdown remains usable. The ledger points reviewers back to the source.</p></div>
-      <dl><div><dt>Tables</dt><dd>1 warning</dd></div><div><dt>Comments</dt><dd>1 warning</dd></div><div><dt>Revisions</dt><dd>2 warnings</dd></div><div><dt>Embedded objects</dt><dd>2 errors</dd></div><div><dt>Footnotes</dt><dd>1 moved</dd></div><div><dt>Images</dt><dd>1 extracted</dd></div></dl>
+      <div><p class="eyebrow">Generated fidelity ledger</p><h2 id="demo-result-heading">The sample marks seven risk areas</h2><p>The Markdown remains usable. The ledger points reviewers back to the source.</p></div>
+      <dl><div><dt>Tables</dt><dd>1 warning</dd></div><div><dt>Comments</dt><dd>1 warning</dd></div><div><dt>Revisions</dt><dd>2 warnings</dd></div><div><dt>Embedded objects</dt><dd>2 errors</dd></div><div><dt>Footnotes</dt><dd>1 moved</dd></div><div><dt>Styles</dt><dd>1 warning</dd></div><div><dt>Images</dt><dd>1 extracted</dd></div></dl>
     </section>
     <a class="button primary next-step" href="/#install">Install the CLI</a>
   </main>
@@ -176,6 +176,7 @@ const demoLines = [
   'REVISIONS           2 warnings  paragraph 4',
   'EMBEDDED OBJECTS    2 errors    paragraph 13 + package',
   'FOOTNOTES           1 moved     paragraph 12',
+  'STYLES               1 warning   paragraph 3',
   'IMAGES              1 extracted paragraph 11',
   '',
   'Sandbox: /tmp/docx-fidelity-demo-…'
