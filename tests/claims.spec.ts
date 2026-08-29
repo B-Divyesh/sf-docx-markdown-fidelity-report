@@ -97,6 +97,16 @@ test('@regression:unregistered-checkout the site ships no unavailable purchase f
   expect(assets.some((asset) => /^index-[\w-]+\.css$/.test(asset))).toBe(true);
 });
 
+test('@regression:param-factory-footer-link every route uses the certificate-valid factory URL', async ({ page }) => {
+  for (const route of ['/', '/demo', '/privacy', '/terms', '/not-a-route']) {
+    await page.goto(route);
+    const factoryLink = page.getByRole('link', { name: /Built by Param Factory/ });
+    await expect(factoryLink).toBeVisible();
+    await expect(factoryLink).toHaveAttribute('href', 'https://sociobot.in/');
+    await expect(factoryLink).toHaveAttribute('rel', 'external');
+  }
+});
+
 test('@offline-update the service worker reloads the shell without reachable network and uses the network for later navigations', async ({ page }) => {
   await page.goto('/');
   await page.waitForFunction(() => navigator.serviceWorker.ready.then(() => true));

@@ -15,7 +15,7 @@ const header = () => `
 const footer = () => `
   <footer>
     <p>Convert DOCX and map every review risk.</p>
-    <nav aria-label="Footer navigation"><a href="/privacy" data-link>Privacy</a><a href="/terms" data-link>Terms</a><a href="https://www.sociobot.in" rel="external">Built by Param Factory <span class="sr-only">(external)</span></a></nav>
+    <nav aria-label="Footer navigation"><a href="/privacy" data-link>Privacy</a><a href="/terms" data-link>Terms</a><a href="https://sociobot.in/" rel="external">Built by Param Factory <span class="sr-only">(external)</span></a></nav>
     <p class="build">v0.1.0 · build 2026.08.28</p>
   </footer>`;
 
