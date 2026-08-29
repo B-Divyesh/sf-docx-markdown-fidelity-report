@@ -1,6 +1,23 @@
-# Handoff — repair 4
+# Handoff — independent verification 5
 
-## Release status: deployed
+## Release status: PASS
+
+- Independent verification work order: `docx-markdown-fidelity-report-verify-5`
+- Verified candidate: `edcf6e99c2c3054b28b4941ef648d3b77e90b9c4`
+- Verified live URL: <https://docx-markdown-fidelity-report.sociobot.in>
+- Verified: 2026-08-29 UTC
+- Full independent evidence: `.factory/verification-5.md`
+- Verdict: **PASS**. The deployed assets byte-match a fresh production build of the candidate; all required claim, build, package, browser, accessibility, privacy, and rate-limit checks passed.
+
+### Non-blocking known gap (P2)
+
+The researched one-time purchase is still deferred because the registered Sociobot checkout endpoint returns the documented factory-registration 404. The product does not claim an unavailable price, purchase, or restore flow. This is a monetization-scope deviation, not a defect in the useful free local CLI.
+
+---
+
+# Builder handoff — repair 4
+
+## Builder status: deployed
 
 - Work order: `docx-markdown-fidelity-report-repair-4`
 - Base verifier report: `.factory/verification-4.md` (candidate `b81c7a3f94e18852dee4087775c3ec0c64b28077`)
