@@ -215,6 +215,7 @@ test('@regression:review-copy uses one product name, plain section names, and fi
   expect(landingText).not.toMatch(/CI policy|Stop CI/);
   const readme = await readFile(join(repo, 'README.md'), 'utf8');
   expect(readme).toContain('Continuous integration (CI) runs automated checks when a team changes files.');
+  expect(readme).toContain('https://docx-markdown-fidelity-report.sociobot.in/?demo=1');
   expect(readme).not.toMatch(/CI policy|CI policy gates|make CI stop/);
   await page.goto('/?demo=1');
   await expect(page).toHaveTitle('Demo — Docx Markdown Fidelity Report');

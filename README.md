@@ -10,7 +10,7 @@ This local CLI is for teams moving Word-heavy documentation. It creates Markdown
 cargo run -- demo
 ```
 
-The command uses a fresh temporary directory and prints its path. The same flow is recorded at <https://docx-markdown-fidelity-report.sociobot.in/demo>.
+The command uses a fresh temporary directory and prints its path. The same flow is recorded at <https://docx-markdown-fidelity-report.sociobot.in/?demo=1>.
 
 ## Install
 
