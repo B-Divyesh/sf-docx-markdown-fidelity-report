@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.5 — 2026-09-06
+
+- Test the Copy commands and Replay recording controls as public browser claims.
+- Replace an untestable Markdown-quality statement with the exact structures present in the bundled sample.
+
 ## 0.1.4 — 2026-08-29
 
 - Replace unexplained CI-policy jargon with plain automated-check wording across the site and README.

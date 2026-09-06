@@ -56,6 +56,27 @@
     "sandbox": "fresh browser demo context; seed demo: and real: keys, activate Reset demo and Start for real, and assert only demo: keys are removed"
   },
   {
+    "id": "copy-commands",
+    "claim": "Copy commands copies the install commands to the clipboard.",
+    "where": "landing install button",
+    "test": "npm test -- --grep @claim:copy-commands",
+    "sandbox": "fresh browser context; activate Copy commands with the keyboard and read the browser clipboard"
+  },
+  {
+    "id": "replay-recording",
+    "claim": "Replay recording restarts the sample conversion recording from the first command.",
+    "where": "demo terminal control",
+    "test": "npm test -- --grep @claim:replay-recording",
+    "sandbox": "fresh browser demo context; let the recording finish, activate Replay recording with the keyboard, assert it begins again, then assert it reaches the sandbox path"
+  },
+  {
+    "id": "sample-markdown",
+    "claim": "The sample Markdown includes a heading, link, table, image reference, and footnote.",
+    "where": "demo result",
+    "test": "npm test -- --grep @claim:sample-markdown",
+    "sandbox": "CLI demo in a fresh temporary directory; assert the bundled sample Markdown contains every named structure"
+  },
+  {
     "id": "review-checklist",
     "claim": "Each conversion writes a separate human review checklist.",
     "where": "landing steps, README",

@@ -1,6 +1,6 @@
 # Landing page copy audit
 
-Audited 2026-08-29 for v0.1.4. Counts treat commands, paths, and hyphenated terms as one word. Interface labels are included because assistive technology reads them. Commands are listed separately from prose and are not sentence-counted.
+Audited 2026-09-06 for v0.1.5. Counts treat commands, paths, and hyphenated terms as one word. Interface labels are included because assistive technology reads them. Commands are listed separately from prose and are not sentence-counted.
 
 | Copy | Words | Result |
 | --- | ---: | --- |
@@ -72,9 +72,29 @@ Audited 2026-08-29 for v0.1.4. Counts treat commands, paths, and hyphenated term
 | Convert DOCX and list review issues. | 6 | Pass |
 | Terms | 1 | Pass |
 | Built by Param Factory (external) | 5 | Pass |
-| v0.1.4 · build 2026.08.29 | 4 | Pass |
+| v0.1.5 · build 2026.09.06 | 4 | Pass |
 
 No landing sentence exceeds 22 words or contains a banned word. The first screen states the job, audience, first action, action result, and three tested facts. “CI” does not appear on the landing page. The README expands “continuous integration (CI)” before using the abbreviation.
+
+## Demo page copy
+
+| Copy | Words | Result |
+| --- | ---: | --- |
+| Demo — sample data, nothing is saved to your files | 9 | Pass |
+| Reset demo | 2 | Pass |
+| Start for real | 3 | Pass |
+| Bundled field guide | 3 | Pass |
+| See the sample DOCX conversion report. | 6 | Pass |
+| This recording uses the sample shipped with the CLI. | 10 | Pass |
+| It does not upload a document. | 6 | Pass |
+| Replay recording | 2 | Pass |
+| Generated fidelity report | 3 | Pass |
+| The sample report lists seven issue categories | 7 | Pass |
+| The sample Markdown includes a heading, link, table, image reference, and footnote. | 12 | Pass |
+| The fidelity report names the document section to check. | 9 | Pass |
+| Install the CLI | 3 | Pass |
+
+The demo sentence names structures verified by the `sample-markdown` claim. The Copy commands and Replay recording actions are verified by their own browser claims.
 
 ## Command examples
 

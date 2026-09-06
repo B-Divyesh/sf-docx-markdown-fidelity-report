@@ -52,6 +52,41 @@ test('@claim:demo-isolation query demo uses isolated storage and reset never tou
   expect(await page.evaluate(() => ({ demo: localStorage.getItem('demo:check'), real: localStorage.getItem('real:check'), sample: localStorage.getItem('demo:sample') }))).toEqual({ demo: null, real: 'keep', sample: null });
 });
 
+test('@claim:copy-commands the install control copies both commands to the clipboard', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await page.goto('/');
+  const copy = page.locator('[data-copy]');
+  await expect(copy).toHaveAccessibleName('Copy commands');
+  await copy.focus();
+  await page.keyboard.press('Space');
+  await expect(copy).toHaveText('Commands copied');
+  await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe('cargo install --path .\ndocx-fidelity demo');
+});
+
+test('@claim:replay-recording replay starts the sample recording again and reaches its result', async ({ page }) => {
+  await page.goto('/?demo=1');
+  const terminal = page.locator('#terminal-output');
+  await expect(terminal).toContainText('Sandbox: /tmp/docx-fidelity-demo-…');
+
+  const replay = page.getByRole('button', { name: 'Replay recording' });
+  await replay.focus();
+  await page.keyboard.press('Space');
+  await expect(terminal).toContainText('$ docx-fidelity demo');
+  await expect(terminal).not.toContainText('Sandbox: /tmp/docx-fidelity-demo-…');
+  await expect(terminal).toContainText('Sandbox: /tmp/docx-fidelity-demo-…');
+});
+
+test('@claim:sample-markdown bundled demo Markdown contains the named document structures', async () => {
+  const { stdout } = await exec('cargo', ['run', '--quiet', '--', '--json', 'demo'], { cwd: repo });
+  const result = JSON.parse(stdout.trim());
+  const markdown = await readFile(result.outputs[0].markdown, 'utf8');
+  expect(markdown).toMatch(/^# North Ridge Field Guide$/m);
+  expect(markdown).toContain('[*trail notices*](https://example.com/trail-notices)');
+  expect(markdown).toContain('| Marker | Action |');
+  expect(markdown).toContain('![](field-guide.media/image-001.svg)');
+  expect(markdown).toContain('[^2]: North Ridge survey');
+});
+
 test('@claim:fidelity-report complex DOCX reports every promised category and location', async () => {
   const root = await mkdtemp(join(tmpdir(), 'fidelity-ledger-'));
   const output = join(root, 'out');
@@ -122,7 +157,7 @@ test('@claim:single-binary the release build produces one CLI binary', async () 
   const binary = join(repo, 'target', 'release', 'docx-fidelity');
   await access(binary);
   const { stdout } = await exec(binary, ['--version']);
-  expect(stdout).toContain('docx-fidelity 0.1.4');
+  expect(stdout).toContain('docx-fidelity 0.1.5');
 });
 
 test('@claim:rust-toolchain Rust 1.88 builds the locked package', async () => {
